@@ -1,6 +1,6 @@
 # DotNetAnywhere
 
-DotNetAnywhere (DNA) is a small interpreted .NET CIL runtime. The original [code](https://github.com/chrisdunelm/DotNetAnywhere) has been adjusted by Steve Sanderson in his first versions of [Blazor](https://blazor.net), and this version related to WebAssembly is available [here](https://github.com/boyanio/DotNetAnywhere).
+DotNetAnywhere (DNA) is a small interpreted .NET CIL runtime. The original [code](https://github.com/chrisdunelm/DotNetAnywhere) by Chris Bacon has been adjusted by Steve Sanderson in his first versions of [Blazor](https://blazor.net), and this version related to WebAssembly is available [here](https://github.com/boyanio/DotNetAnywhere).
 
 This version adds porting to 64-bit platforms, and some debugging options. The 64-bit port is not yet complete, or thoroughly tested, for some examples which work see the `testcases\_passing\_64bit` folder. Expect more testcases to appear there in the future.
 
