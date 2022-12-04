@@ -1,0 +1,42 @@
+﻿using System;
+
+namespace Test02 {
+
+    public class Program {
+
+        private const string TESTCASE = "TESTCASE02 : ";
+
+        private const string TEST_PASSED = "test_passed";
+        private const string TEST_FAILED = "test_FAILED";
+
+        static void Main(string[] args) {
+            Console.WriteLine( TESTCASE +  "test looping, array-usage, methodcall." );
+
+            const int sz = 100;
+
+            int[] arr = new int[sz];
+            for ( int i = 0; i < sz; i++ ) {
+                arr[i] = i;
+            }
+
+            int sum = 0;
+// taitaa puuttua tällainen konversio:
+// 0xD4 	conv.ovf.i 	Convert to a native int (on the stack as native int) and throw an exception on overflow. SIIS long => int.
+            //for ( long x = 0; x < (long) sz; x++ ) {
+            for ( int x = 0; x < sz; x++ ) {
+                sum += arr[x];
+            }
+
+            Program p = new Program();
+            p.FinalReport( sum );
+
+            if ( sum == 4950 ) Console.WriteLine( TESTCASE + TEST_PASSED );
+            else Console.WriteLine( TESTCASE + TEST_FAILED );
+        }
+
+        void FinalReport( int x ) {
+            Console.WriteLine( TESTCASE + "sum = " + x );
+        }
+    }
+
+}
