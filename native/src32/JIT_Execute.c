@@ -563,7 +563,7 @@ U32 opcodeNumUses[JIT_OPCODE_MAXNUM];
 
 #define GO_NEXT() \
 	CHECK_FOR_BREAKPOINT(); \
-	goNextAddress = (void*)GET_OP_32( JIT_OPS_TYPE_OP_32 ); \
+	goNextAddress = (void*)GET_OP_32( JITOPS_TYPE_OP_32 ); \
 	{ __asm mov goNextAddress, edi \
 	__asm jmp DWORD PTR [edi - 4] }
 

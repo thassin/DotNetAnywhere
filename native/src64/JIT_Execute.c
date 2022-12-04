@@ -580,7 +580,7 @@ U32 opcodeNumUses[JIT_OPCODE_MAXNUM];
 
 #define GO_NEXT() \
 	CHECK_FOR_BREAKPOINT(); \
-	goNextAddress = (void*)GET_OP_64( JIT_OPS_TYPE_OP_64 ); \
+	goNextAddress = (void*)GET_OP_64( JITOPS_TYPE_OP_64 ); \
 	goto *goNextAddress
 
 #endif // _WIN32
@@ -1064,8 +1064,9 @@ JIT_LOAD_I64_start:
 JIT_LOAD_F64_start:
 	OPCODE_USE(JIT_LOAD_I64);
 	{
-		U64 value = *(U64*)pCurOp;
-		pCurOp += 2;
+	//	U64 value = *(U64*)pCurOp;
+	//	pCurOp += 2;
+		U64 value = (U64)GET_OP_64( JITOPS_TYPE_VAL_64 );
 		PUSH_U64(value);
 	}
 JIT_LOAD_I64_end:
