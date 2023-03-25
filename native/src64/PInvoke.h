@@ -27,6 +27,8 @@
 
 #ifdef _EMSCRIPTEN
 extern char* invokeJsFunc(STRING libName, STRING funcName, STRING arg0);
+#else // _EMSCRIPTEN
+typedef void* fnPInvoke;
 #endif // _EMSCRIPTEN
 
 fnPInvoke PInvoke_GetFunction(tMetaData *pMetaData, tMD_ImplMap *pImplMap);

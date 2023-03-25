@@ -44,6 +44,7 @@ void Crash(char *pMsg, ...);
 
 extern U32 logLevel;
 void log_f(U32 level, char *pMsg, ...);
+U32 getLogLevel(void);
 
 char* Sys_GetMethodDesc(tMD_MethodDef *pMethod);
 

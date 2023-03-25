@@ -278,8 +278,12 @@ static U32* JITit(tMD_MethodDef *pMethodDef, U8 *pCIL, U32 codeSize, tParameter 
 
 	I32 i32Value;
 	U32 u32Value, u32Value2, ofs;
+
 	uConvFloat convFloat;
+	float floatValue;
 	uConvDouble convDouble;
+	double doubleValue;
+
 	tMD_TypeDef *pTypeA, *pTypeB;
 	PTR pMem;
 	tMetaData *pMetaData;
@@ -365,7 +369,7 @@ tMD_TypeDef *pTmpType;
                 nextOpSequencePoint = -1;
             }
         }
-        
+
 		switch (op) {
 			case CIL_NOP:
                 {
@@ -445,17 +449,21 @@ cilLdcI4:
 
 			case CIL_LDC_R4:
 				convFloat.u32 = GetUnalignedU32(pCIL, &cilOfs);
+				// get the R32 result now, since the macros are using the SAME convFloat union.
+				floatValue = convFloat.f;
 				PushStackType(types[TYPE_SYSTEM_SINGLE]);
 				PushOp(JIT_LOAD_F32);
-				PushFloat(convFloat.f);
+				PushFloat(floatValue);
 				break;
 
 			case CIL_LDC_R8:
 				convDouble.u32.a = GetUnalignedU32(pCIL, &cilOfs);
 				convDouble.u32.b = GetUnalignedU32(pCIL, &cilOfs);
+				// get the R64 result now, since the macros are using the SAME convDouble union.
+				doubleValue = convDouble.d;
 				PushStackType(types[TYPE_SYSTEM_DOUBLE]);
 				PushOp(JIT_LOAD_F64);
-				PushDouble(convDouble.d);
+				PushDouble(doubleValue);
 				break;
 
 			case CIL_LDARG_0:
@@ -470,11 +478,11 @@ cilLdcI4:
 cilLdArg:
 				pStackType = pMethodDef->pParams[u32Value].pTypeDef;
 				ofs = pMethodDef->pParams[u32Value].offset;
-				PushOpParam(JIT_LOADPARAMLOCAL_TYPEID + pStackType->stackType, ofs);
-				// if it's a valuetype then push the TypeDef of it afterwards
-				if (pStackType->stackType == EVALSTACK_VALUETYPE) {
-					PushPTR(pStackType);
-				}
+					PushOpParam(JIT_LOADPARAMLOCAL_TYPEID + pStackType->stackType, ofs);
+					// if it's a valuetype then push the TypeDef of it afterwards
+					if (pStackType->stackType == EVALSTACK_VALUETYPE) {
+						PushPTR(pStackType);
+					}
 				PushStackType(pStackType);
 				break;
 
@@ -490,11 +498,11 @@ cilLdArg:
 				u32Value = pCIL[cilOfs++];
 				pStackType = PopStackType();
 				ofs = pMethodDef->pParams[u32Value].offset;
-				PushOpParam(JIT_STOREPARAMLOCAL_TYPEID + pStackType->stackType, ofs);
-				// if it's a valuetype then push the TypeDef of it afterwards
-				if (pStackType->stackType == EVALSTACK_VALUETYPE) {
-					PushPTR(pStackType);
-				}
+					PushOpParam(JIT_STOREPARAMLOCAL_TYPEID + pStackType->stackType, ofs);
+					// if it's a valuetype then push the TypeDef of it afterwards
+					if (pStackType->stackType == EVALSTACK_VALUETYPE) {
+						PushPTR(pStackType);
+					}
 				break;
 
 			case CIL_LDLOC_0:
@@ -511,11 +519,11 @@ cilLdArg:
 cilLdLoc:
 				pStackType = pLocals[u32Value].pTypeDef;
 				ofs = pMethodDef->parameterStackSize + pLocals[u32Value].offset;
-				PushOpParam(JIT_LOADPARAMLOCAL_TYPEID + pStackType->stackType, ofs);
-				// if it's a valuetype then push the TypeDef of it afterwards
-				if (pStackType->stackType == EVALSTACK_VALUETYPE) {
-					PushPTR(pStackType);
-				}
+					PushOpParam(JIT_LOADPARAMLOCAL_TYPEID + pStackType->stackType, ofs);
+					// if it's a valuetype then push the TypeDef of it afterwards
+					if (pStackType->stackType == EVALSTACK_VALUETYPE) {
+						PushPTR(pStackType);
+					}
 				PushStackType(pStackType);
 				break;
 
@@ -531,11 +539,11 @@ cilLdLoc:
 cilStLoc:
 				pStackType = PopStackType();
 				ofs = pMethodDef->parameterStackSize + pLocals[u32Value].offset;
-				PushOpParam(JIT_STOREPARAMLOCAL_TYPEID + pStackType->stackType, ofs);
-				// if it's a valuetype then push the TypeDef of it afterwards
-				if (pStackType->stackType == EVALSTACK_VALUETYPE) {
-					PushPTR(pStackType);
-				}
+					PushOpParam(JIT_STOREPARAMLOCAL_TYPEID + pStackType->stackType, ofs);
+					// if it's a valuetype then push the TypeDef of it afterwards
+					if (pStackType->stackType == EVALSTACK_VALUETYPE) {
+						PushPTR(pStackType);
+					}
 				break;
 
 			case CIL_LDLOCA_S:
@@ -573,7 +581,7 @@ cilStLoc:
 				u32Value = TYPE_SYSTEM_DOUBLE;
 				goto cilLdInd;
 			case CIL_LDIND_REF:
-				u32Value = TYPE_SYSTEM_OBJECT;
+				u32Value = TYPE_SYSTEM_UINT64; // for 64bit only.
 				goto cilLdInd;
 			case CIL_LDIND_I:
 				u32Value = TYPE_SYSTEM_INTPTR;
@@ -967,12 +975,19 @@ cilConvUInt32:
 cilConv:
 				pStackType = PopStackType();
 				{
+
+// some extra checks for 64bit (pointer) types.
+int fromTypeIsPointer = 0;
+if ( pStackType->stackType == EVALSTACK_PTR ) fromTypeIsPointer = 1;
+if ( pStackType->stackType == EVALSTACK_O ) fromTypeIsPointer = 1;
+
 					U32 opCodeBase;
 					U32 useParam = 0, param;
 					// This is the types that the conversion is from.
 					switch (pStackType->stackType) {
 					case EVALSTACK_INT64:
 					case EVALSTACK_PTR: // Only on 64-bit
+						// this signed/unsigned detection is not always working?
 						opCodeBase = (pStackType == types[TYPE_SYSTEM_INT64])?JIT_CONV_FROM_I64:JIT_CONV_FROM_U64;
 						break;
 					case EVALSTACK_INT32:
@@ -1012,6 +1027,24 @@ cilConv:
 					default:
 						Crash("JITit() Conv cannot handle convOpOffset %d", convOpOffset);
 					}
+
+// some extra checks for 64bit (pointer) types.
+if ( fromTypeIsPointer ) {
+	if ( op == CIL_CONV_U ) {
+
+		log_f( 3, "op=%#x :: CONVERT pointer CIL_CONV_U\n" );
+
+		// this CONV_I64_U64 operation will be translated to JIT_NOP.
+		opCodeBase = JIT_CONV_FROM_I64; // must force this => was it correctly determined above?
+		convOpOffset = JIT_CONV_OFFSET_U64;
+		useParam = 0;
+	}
+}
+
+// for stacktypes see: EvalStack.h
+// for types-array see: Type.c from line 365- and type.h from line 58-
+log_f( 3, "op=%#x :: CONVERT from stacktype %d to systemtype %d\n", op, pStackType->stackType, toType );
+
 					PushOp(opCodeBase + convOpOffset);
 					if (useParam) {
 						PushU32(param);
@@ -1530,6 +1563,21 @@ cilLeave:
 					
 				case CILX_RETHROW:
 					PushOp(JIT_RETHROW);
+					break;
+
+				case CILX_SIZEOF:
+// added 20230325 by TommiHassinen.
+// => IntPtr.ToString() or Console.Write() with an IntPtr parameter uses this.
+// => seems to work at 32bit at least, at 64bit there is a crash later when reading metadata.
+					{
+						tMD_TypeDef *pTypeDef;
+
+						u32Value = GetUnalignedU32(pCIL, &cilOfs);
+						pTypeDef = MetaData_GetTypeDefFromDefRefOrSpec(pMethodDef->pMetaData, u32Value, pMethodDef->pParentType->ppClassTypeArgs, pMethodDef->ppMethodTypeArgs);
+						PushOp(JIT_LOAD_I32);
+						PushU32(pTypeDef->instanceMemSize);
+						PushStackType(types[TYPE_SYSTEM_UINT32]);
+					}
 					break;
 
 				case CILX_CONSTRAINED:

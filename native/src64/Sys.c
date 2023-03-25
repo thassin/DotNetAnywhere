@@ -65,6 +65,10 @@ void log_f(U32 level, char *pMsg, ...) {
 	}
 }
 
+U32 getLogLevel(void) {
+	return logLevel;
+}
+
 static char methodName[2048];
 char* Sys_GetMethodDesc(tMD_MethodDef *pMethod) {
 	U32 i;

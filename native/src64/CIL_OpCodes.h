@@ -224,4 +224,7 @@
 
 #define CILX_RETHROW	0x1a
 
+#define CILX_SIZEOF	0x1c
+
 #define CILX_READONLY	0x1e
+

@@ -24,6 +24,8 @@
 typedef struct tJITted_ tJITted;
 typedef struct tExceptionHeader_ tExceptionHeader;
 
+#ifdef _EMSCRIPTEN
+
 // [Steve] This overly-specific-looking int-returning 3-STRING-arg signature is because it's difficult
 // to support arbitrary signatures given Emscripten's limitations around needing to know the original
 // type of a function pointer when invoking it: https://kripken.github.io/emscripten-site/docs/porting/guidelines/function_pointer_issues.html
@@ -35,6 +37,8 @@ typedef struct tExceptionHeader_ tExceptionHeader;
 // to U64, since it looks like that's hardcoded as the return type in Pinvoke.c. But I don't need to deal
 // with that now.
 typedef int(*fnPInvoke)(STRING libName, STRING funcName, STRING arg0);
+
+#endif // _EMSCRIPTEN
 
 #include "Types.h"
 
@@ -137,7 +141,11 @@ typedef struct tJITCallPInvoke_ tJITCallPInvoke;
 struct tJITCallPInvoke_ {
 	U32 opCode;
 	// The native function to call
+#ifdef _EMSCRIPTEN
 	fnPInvoke fn;
+#else // _EMSCRIPTEN
+	void* fn;
+#endif // _EMSCRIPTEN
 	// The method that is being called
 	tMD_MethodDef *pMethod;
 	// The ImplMap of the function that's being called

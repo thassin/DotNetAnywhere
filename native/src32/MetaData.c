@@ -362,7 +362,7 @@ switch ( tableID ) {
 	case 10:	expectedSize = 16; break;
 	case 11:	expectedSize = 12; break;
 	case 12:	expectedSize = 12; break;
-	case 14:	expectedSize = -1; break;
+	case 14:	expectedSize = 12; break;
 	case 15:	expectedSize = 12; break;
 	case 17:	expectedSize = 4; break;
 	case 18:	expectedSize = -1; break;

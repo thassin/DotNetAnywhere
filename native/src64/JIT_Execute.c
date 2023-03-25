@@ -449,8 +449,8 @@ static int readStackItemType_func( int shift, tMethodState* pCurrMethodState, lo
 
 // General binary ops
 #define BINARY_OP(returnType, type1, type2, op) \
-	CHECK_STACKITEM_TYPE( sizeof(type1), 0 ); \
-	CHECK_STACKITEM_TYPE( sizeof(type2), -sizeof(type1) ); \
+	CHECK_STACKITEM_TYPE( sizeof(type2), 0 ); \
+	CHECK_STACKITEM_TYPE( sizeof(type1), -sizeof(type2) ); \
 	pCurEvalStack -= sizeof(type1) + sizeof(type2) - sizeof(returnType); \
 	*(returnType*)(pCurEvalStack - sizeof(returnType)) = \
 	*(type1*)(pCurEvalStack - sizeof(returnType)) op \
@@ -514,6 +514,34 @@ log_f( 3, "EXTRA_STACKPOINTER_CHANGE at line %d : change = %d    CreateParameter
 
 	*ppCurEvalStack -= pCallMethod->parameterStackSize - ofs;
 	memcpy(pParamsLocals + ofs, *ppCurEvalStack, pCallMethod->parameterStackSize - ofs);
+
+	if( getLogLevel() < 3 ) return;
+
+	// now dump the call parameters, with types and values if possible.
+
+	log_f( 3, "DUMP_CALL_PARAMS for : %s.%s()\n", pCallMethod->pParentType->nameSpace, pCallMethod->name ); 
+	for ( int p = 0; p < pCallMethod->numberOfParameters; p++ ) {
+
+
+		tParameter *pParam = &(pCallMethod->pParams[p]);
+
+		tMD_TypeDef *pTypeDef = pParam->pTypeDef;
+		U32 offset = pParam->offset;
+		//U32 size = pParam->size;
+
+		if ( pTypeDef == types[TYPE_SYSTEM_INT32] ) {
+			int value = *(int*)(pParamsLocals + offset);
+			log_f( 3, "DUMP_CALL_PARAMS    %d => %s.%s value=%d\n", p, pTypeDef->nameSpace, pTypeDef->name, value ); 
+		} else if ( pTypeDef == types[TYPE_SYSTEM_SINGLE] ) {
+			float value = *(float*)(pParamsLocals + offset);
+			log_f( 3, "DUMP_CALL_PARAMS    %d => %s.%s value=%f  %#x\n", p, pTypeDef->nameSpace, pTypeDef->name, value, *(U32*)&value ); 
+		} else if ( pTypeDef == types[TYPE_SYSTEM_DOUBLE] ) {
+			double value = *(double*)(pParamsLocals + offset);
+			log_f( 3, "DUMP_CALL_PARAMS    %d => %s.%s value=%f  %#llx\n", p, pTypeDef->nameSpace, pTypeDef->name, value, *(U64*)&value ); 
+		} else {
+			log_f( 3, "DUMP_CALL_PARAMS    %d => %s.%s\n", p, pTypeDef->nameSpace, pTypeDef->name ); 
+		}
+	}
 }
 
 static tMethodState* RunFinalizer(tThread *pThread) {
@@ -555,7 +583,7 @@ U32 opcodeNumUses[JIT_OPCODE_MAXNUM];
 #else // DIAG_OPCODE_USE
 
 //#define OPCODE_USE(op)
-#define OPCODE_USE(op) log_f( 3, "exec_OPCODE_USE  %s  (%#x)  opCodeUse=%d\n", JIT_GetOpCodeName(op), op, opCodeUseCounter++ )
+#define OPCODE_USE(op) log_f( 3, "trackControlFlow exec_OPCODE_USE  %s  (%#x)  opCodeUse=%d\n", JIT_GetOpCodeName(op), op, opCodeUseCounter++ )
 
 #endif // DIAG_OPCODE_USE
 
@@ -885,12 +913,14 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 		GET_LABELS_DYNAMIC(JIT_CONV_U32_R64, 0);
 		GET_LABELS_DYNAMIC(JIT_CONV_I64_I32, 4);
 		GET_LABELS_DYNAMIC(JIT_CONV_I64_U32, 4);
+		GET_LABELS_DYNAMIC(JIT_CONV_I64_I64, 0); // added 20230317 (64bit IntPtr.ToString)
 		GET_LABELS_DYNAMIC(JIT_CONV_I64_U64, 0);
 		GET_LABELS_DYNAMIC(JIT_CONV_I64_R32, 0);
 		GET_LABELS_DYNAMIC(JIT_CONV_I64_R64, 0);
 		GET_LABELS_DYNAMIC(JIT_CONV_U64_I32, 4);
 		GET_LABELS_DYNAMIC(JIT_CONV_U64_U32, 4);
 		GET_LABELS_DYNAMIC(JIT_CONV_U64_I64, 0);
+		GET_LABELS_DYNAMIC(JIT_CONV_U64_U64, 0); // added 20230317 (64bit IntPtr.ToString)
 		GET_LABELS_DYNAMIC(JIT_CONV_U64_R32, 0);
 		GET_LABELS_DYNAMIC(JIT_CONV_U64_R64, 0);
 		GET_LABELS_DYNAMIC(JIT_CONV_R32_I32, 4);
@@ -971,14 +1001,18 @@ noCode:
 JIT_NOP_start:
 JIT_CONV_R32_R32_start:
 JIT_CONV_R64_R64_start:
+JIT_CONV_I64_I64_start: // added 20230317
 JIT_CONV_I64_U64_start:
 JIT_CONV_U64_I64_start:
+JIT_CONV_U64_U64_start: // added 20230317
 	OPCODE_USE(JIT_NOP);
 JIT_NOP_end:
 JIT_CONV_R32_R32_end:
 JIT_CONV_R64_R64_end:
+JIT_CONV_I64_I64_end: // added 20230317
 JIT_CONV_I64_U64_end:
 JIT_CONV_U64_I64_end:
+JIT_CONV_U64_U64_end: // added 20230317
 JIT_GoNext_start:
 	GO_NEXT();
 JIT_GoNext_end:
@@ -1081,7 +1115,7 @@ JIT_LOADPARAMLOCAL_F32_start:
 	goto allLoadPrmLoc32Start;
 JIT_LOADPARAMLOCAL_INTNATIVE_start: // Only on 32-bit?
 	op = JIT_LOADPARAMLOCAL_INTNATIVE;
-//	goto allLoadPrmLoc32Start;
+	goto allLoadPrmLoc32Start;
 allLoadPrmLoc32Start:
 	OPCODE_USE( op );
 	{
@@ -1100,12 +1134,12 @@ JIT_LOADPARAMLOCAL_INT64_start:
 JIT_LOADPARAMLOCAL_F64_start:
 	op = JIT_LOADPARAMLOCAL_F64;
 	goto allLoadPrmLoc64Start;
-JIT_LOADPARAMLOCAL_O_start:
+JIT_LOADPARAMLOCAL_O_start: // 64bit only.
 	op = JIT_LOADPARAMLOCAL_O;
 	goto allLoadPrmLoc64Start;
-JIT_LOADPARAMLOCAL_PTR_start:
+JIT_LOADPARAMLOCAL_PTR_start: // 64bit only.
 	op = JIT_LOADPARAMLOCAL_PTR;
-//	goto allLoadPrmLoc64Start;
+	goto allLoadPrmLoc64Start;
 allLoadPrmLoc64Start:
 	OPCODE_USE( op );
 	{
@@ -1115,8 +1149,8 @@ allLoadPrmLoc64Start:
 	}
 JIT_LOADPARAMLOCAL_INT64_end:
 JIT_LOADPARAMLOCAL_F64_end:
-JIT_LOADPARAMLOCAL_O_end:
-JIT_LOADPARAMLOCAL_PTR_end:
+JIT_LOADPARAMLOCAL_O_end: // 64bit only.
+JIT_LOADPARAMLOCAL_PTR_end: // 64bit only.
 	GO_NEXT();
 
 JIT_LOADPARAMLOCAL_VALUETYPE_start:
@@ -1152,7 +1186,7 @@ JIT_STOREPARAMLOCAL_F32_start:
 	goto allStorePrmLoc32Start;
 JIT_STOREPARAMLOCAL_INTNATIVE_start: // Only on 32-bit?
 	op = JIT_STOREPARAMLOCAL_INTNATIVE;
-//	goto allStorePrmLoc32Start;
+	goto allStorePrmLoc32Start;
 allStorePrmLoc32Start:
 	OPCODE_USE( op );
 	{
@@ -1171,12 +1205,12 @@ JIT_STOREPARAMLOCAL_INT64_start:
 JIT_STOREPARAMLOCAL_F64_start:
 	op = JIT_STOREPARAMLOCAL_F64;
 	goto allStorePrmLoc64Start;
-JIT_STOREPARAMLOCAL_O_start:
+JIT_STOREPARAMLOCAL_O_start: // 64bit only.
 	op = JIT_STOREPARAMLOCAL_O;
 	goto allStorePrmLoc64Start;
-JIT_STOREPARAMLOCAL_PTR_start:
+JIT_STOREPARAMLOCAL_PTR_start: // 64bit only.
 	op = JIT_STOREPARAMLOCAL_PTR;
-//	goto allStorePrmLoc64Start;
+	goto allStorePrmLoc64Start;
 allStorePrmLoc64Start:
 	OPCODE_USE( op );
 	{
@@ -1186,8 +1220,8 @@ allStorePrmLoc64Start:
 	}
 JIT_STOREPARAMLOCAL_INT64_end:
 JIT_STOREPARAMLOCAL_F64_end:
-JIT_STOREPARAMLOCAL_O_end:
-JIT_STOREPARAMLOCAL_PTR_end:
+JIT_STOREPARAMLOCAL_O_end: // 64bit only.
+JIT_STOREPARAMLOCAL_PTR_end: // 64bit only.
 	GO_NEXT();
 
 JIT_STOREPARAMLOCAL_VALUETYPE_start:
@@ -1213,7 +1247,7 @@ JIT_LOADINDIRECT_U8_start:
 JIT_LOADINDIRECT_U16_start:
 JIT_LOADINDIRECT_U32_start:
 JIT_LOADINDIRECT_R32_start:
-JIT_LOADINDIRECT_REF_start:
+//JIT_LOADINDIRECT_REF_start: // 32bit only.
 	OPCODE_USE(JIT_LOADINDIRECT_U32);
 	{
 		PTR pMem = POP_PTR();
@@ -1227,11 +1261,12 @@ JIT_LOADINDIRECT_U8_end:
 JIT_LOADINDIRECT_U16_end:
 JIT_LOADINDIRECT_U32_end:
 JIT_LOADINDIRECT_R32_end:
-JIT_LOADINDIRECT_REF_end:
+//JIT_LOADINDIRECT_REF_end: // 32bit only.
 	GO_NEXT();
 
 JIT_LOADINDIRECT_R64_start:
 JIT_LOADINDIRECT_I64_start:
+JIT_LOADINDIRECT_REF_start: // 64bit only.
 	OPCODE_USE(JIT_LOADINDIRECT_I64);
 	{
 		PTR pMem = POP_PTR();
@@ -1240,12 +1275,13 @@ JIT_LOADINDIRECT_I64_start:
 	}
 JIT_LOADINDIRECT_R64_end:
 JIT_LOADINDIRECT_I64_end:
+JIT_LOADINDIRECT_REF_end: // 64bit only.
 	GO_NEXT();
 
 JIT_STOREINDIRECT_U8_start:
 JIT_STOREINDIRECT_U16_start:
 JIT_STOREINDIRECT_U32_start:
-JIT_STOREINDIRECT_REF_start:
+//JIT_STOREINDIRECT_REF_start: // 32bit only.
 	OPCODE_USE(JIT_STOREINDIRECT_U32);
 	{
 		U32 value = POP_U32(); // The value to store
@@ -1255,7 +1291,12 @@ JIT_STOREINDIRECT_REF_start:
 JIT_STOREINDIRECT_U8_end:
 JIT_STOREINDIRECT_U16_end:
 JIT_STOREINDIRECT_U32_end:
-JIT_STOREINDIRECT_REF_end:
+//JIT_STOREINDIRECT_REF_end: // 32bit only.
+	GO_NEXT();
+
+JIT_STOREINDIRECT_REF_start: // 64bit only.
+	Crash( "JIT_STOREINDIRECT_REF 64bit not implemented" );
+JIT_STOREINDIRECT_REF_end: // 64bit only.
 	GO_NEXT();
 
 JIT_STORE_OBJECT_VALUETYPE_start:
@@ -1276,7 +1317,9 @@ JIT_CALL_PINVOKE_start:
 		tJITCallPInvoke *pCallPInvoke;
 		U32 res;
 
-		pCallPInvoke = (tJITCallPInvoke*)(pCurOp - 1);
+		int stepBack = 2; // the current opcode was 2x U32 value in JIT Ops table.
+
+		pCallPInvoke = (tJITCallPInvoke*)(pCurOp - stepBack);
 		res = PInvoke_Call(pCallPInvoke, pParamsLocals, pCurrentMethodState->pEvalStack, pThread);
 		pCurrentMethodState->stackOfs = res;
 	}
@@ -3058,7 +3101,7 @@ JIT_STOREFIELD_F32_start:
 	goto allStoreField32Start;
 JIT_STOREFIELD_INTNATIVE_start: // only for 32-bit?
 	op = JIT_STOREFIELD_INTNATIVE;
-//	goto allStoreField32Start;
+	goto allStoreField32Start;
 allStoreField32Start:
 	OPCODE_USE( op );
 	{
@@ -3084,12 +3127,12 @@ JIT_STOREFIELD_INT64_start:
 JIT_STOREFIELD_F64_start:
 	op = JIT_STOREFIELD_F64;
 	goto allStoreField64Start;
-JIT_STOREFIELD_O_start:
+JIT_STOREFIELD_O_start: // 64bit only.
 	op = JIT_STOREFIELD_O;
 	goto allStoreField64Start;
-JIT_STOREFIELD_PTR_start:
+JIT_STOREFIELD_PTR_start: // 64bit only.
 	op = JIT_STOREFIELD_PTR;
-//	goto allStoreField64Start;
+	goto allStoreField64Start;
 allStoreField64Start:
 	OPCODE_USE( op );
 	{
@@ -3106,8 +3149,8 @@ allStoreField64Start:
 	}
 JIT_STOREFIELD_INT64_end:
 JIT_STOREFIELD_F64_end:
-JIT_STOREFIELD_O_end:
-JIT_STOREFIELD_PTR_end:
+JIT_STOREFIELD_O_end: // 64bit only.
+JIT_STOREFIELD_PTR_end: // 64bit only.
 	GO_NEXT();
 
 JIT_STOREFIELD_VALUETYPE_start:
@@ -3206,8 +3249,8 @@ JIT_STORESTATICFIELD_INTNATIVE_end:
 
 JIT_STORESTATICFIELD_INT64_start:
 JIT_STORESTATICFIELD_F64_start:
-JIT_STORESTATICFIELD_O_start:
-JIT_STORESTATICFIELD_PTR_start:
+JIT_STORESTATICFIELD_O_start: // 64bit only.
+JIT_STORESTATICFIELD_PTR_start: // 64bit only.
 	OPCODE_USE(JIT_STORESTATICFIELD_INT64);
 	{
 		tMD_FieldDef *pFieldDef;
@@ -3222,8 +3265,8 @@ JIT_STORESTATICFIELD_PTR_start:
 	}
 JIT_STORESTATICFIELD_INT64_end:
 JIT_STORESTATICFIELD_F64_end:
-JIT_STORESTATICFIELD_O_end:
-JIT_STORESTATICFIELD_PTR_end:
+JIT_STORESTATICFIELD_O_end: // 64bit only.
+JIT_STORESTATICFIELD_PTR_end: // 64bit only.
 	GO_NEXT();
 
 JIT_STORESTATICFIELD_VALUETYPE_start:
@@ -3616,3 +3659,4 @@ void JIT_Execute_Init() {
 	// Initialise the JIT code addresses
 	JIT_Execute(NULL, 0);
 }
+

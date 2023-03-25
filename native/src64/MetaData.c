@@ -443,6 +443,14 @@ static int table_12_fieldInfo[] = {
 	FIELDINFO_END
 };
 
+static int table_14_fieldInfo[] = {
+	offsetof( struct tMD_DeclSecurity_, action ), 0,
+	offsetof( struct tMD_DeclSecurity_, padding0 ), 0,
+	offsetof( struct tMD_DeclSecurity_, parent ), 0,
+	offsetof( struct tMD_DeclSecurity_, permissionSet ), 1,
+	FIELDINFO_END
+};
+
 static int table_15_fieldInfo[] = {
 	offsetof( struct tMD_ClassLayout_, packingSize ), 0,
 	offsetof( struct tMD_ClassLayout_, padding0 ), 0,
@@ -637,7 +645,7 @@ switch ( tableID ) {
 	case 10:	expectedSize = 32; break;
 	case 11:	expectedSize = 16; break;
 	case 12:	expectedSize = 16; break;
-	case 14:	expectedSize = -1; break;
+	case 14:	expectedSize = 16; break;
 	case 15:	expectedSize = 12; break;
 	case 17:	expectedSize = 8; break;
 	case 18:	expectedSize = -1; break;
@@ -679,6 +687,7 @@ switch ( tableID ) {
 	case 10:	fieldInfo = table_10_fieldInfo; break;
 	case 11:	fieldInfo = table_11_fieldInfo; break;
 	case 12:	fieldInfo = table_12_fieldInfo; break;
+	case 14:	fieldInfo = table_14_fieldInfo; break;
 	case 15:	fieldInfo = table_15_fieldInfo; break;
 	case 17:	fieldInfo = table_17_fieldInfo; break;
 	case 18:	fieldInfo = table_18_fieldInfo; break;

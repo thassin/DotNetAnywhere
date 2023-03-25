@@ -74,7 +74,7 @@ static tLoadedLib* GetLib(STRING name) {
 			char *pError;
 			pError = dlerror();
 			if (pError) {
-				printf("dlopen() Error: '%s'",pError);
+				printf("dlopen() Error: '%s'", pError);
 			}
 		}
 #endif
@@ -119,8 +119,8 @@ fnPInvoke PInvoke_GetFunction(tMetaData *pMetaData, tMD_ImplMap *pImplMap) {
 static void* ConvertStringToANSI(HEAP_PTR pHeapEntry) {
 	U32 strLen, i;
 	STRING2 str = SystemString_GetString(pHeapEntry, &strLen);
-	unsigned char *pAnsi = (unsigned char*)malloc(strLen+1);
-	for (i=0; i<strLen; i++) {
+	unsigned char *pAnsi = (unsigned char*)malloc(strLen + 1);
+	for (i = 0; i < strLen; i++) {
 		pAnsi[i] = (unsigned char)str[i];
 	}
 	pAnsi[i] = 0;
@@ -131,7 +131,7 @@ static void* ConvertStringToANSI(HEAP_PTR pHeapEntry) {
 static void* ConvertStringToUnicode(HEAP_PTR pHeapEntry) {
 	U32 strLen;
 	STRING2 str = SystemString_GetString(pHeapEntry, &strLen);
-	unsigned short *pUnicode = (unsigned short*)malloc((strLen+1) << 1);
+	unsigned short *pUnicode = (unsigned short*)malloc((strLen + 1) << 1);
 	memcpy(pUnicode, str, strLen << 1);
 	pUnicode[strLen] = 0;
 	return pUnicode;
@@ -139,47 +139,55 @@ static void* ConvertStringToUnicode(HEAP_PTR pHeapEntry) {
 
 #include "PInvoke_TypeDef.h"
 
-typedef U64    (STDCALL *_uCuuuuu)(U32 _0, U32 _1, U32 _2, U32 _3, U32 _4);
-typedef U64    (STDCALL *_uCuuuuuu)(U32 _0, U32 _1, U32 _2, U32 _3, U32 _4, U32 _5);
-typedef U64    (STDCALL *_uCuuuuuuu)(U32 _0, U32 _1, U32 _2, U32 _3, U32 _4, U32 _5, U32 _6);
-typedef U64    (STDCALL *_uCuuuuuuuu)(U32 _0, U32 _1, U32 _2, U32 _3, U32 _4, U32 _5, U32 _6, U32 _7);
-typedef U64    (STDCALL *_uCuuuuuuuuu)(U32 _0, U32 _1, U32 _2, U32 _3, U32 _4, U32 _5, U32 _6, U32 _7, U32 _8);
-typedef U64    (STDCALL *_uCuuuuuuuuuu)(U32 _0, U32 _1, U32 _2, U32 _3, U32 _4, U32 _5, U32 _6, U32 _7, U32 _8, U32 _9);
+typedef U32 (STDCALL *_uCuuuuu)(U32 _0, U32 _1, U32 _2, U32 _3, U32 _4);
+typedef U32 (STDCALL *_uCuuuuuu)(U32 _0, U32 _1, U32 _2, U32 _3, U32 _4, U32 _5);
+typedef U64 (STDCALL *_xCxuuuuu)(U64 _0, U32 _1, U32 _2, U32 _3, U32 _4, U32 _5); // for SDL_CreateWindow() 64bit.
+typedef U32 (STDCALL *_uCuuuuuuu)(U32 _0, U32 _1, U32 _2, U32 _3, U32 _4, U32 _5, U32 _6);
+typedef U32 (STDCALL *_uCuuuuuuuu)(U32 _0, U32 _1, U32 _2, U32 _3, U32 _4, U32 _5, U32 _6, U32 _7);
+typedef U32 (STDCALL *_uCuuuuuuuuu)(U32 _0, U32 _1, U32 _2, U32 _3, U32 _4, U32 _5, U32 _6, U32 _7, U32 _8);
+typedef U32 (STDCALL *_uCuuuuuuuuuu)(U32 _0, U32 _1, U32 _2, U32 _3, U32 _4, U32 _5, U32 _6, U32 _7, U32 _8, U32 _9);
 
 #define CALL0(returnType) (returnType)
-#define CALL1(returnType, t0) ((returnType) | ((t0)<<2))
-#define CALL2(returnType, t0, t1) ((returnType) | ((t0)<<2) | ((t1)<<4))
-#define CALL3(returnType, t0, t1, t2) ((returnType) | ((t0)<<2) | ((t1)<<4) | ((t2)<<6))
-#define CALL4(returnType, t0, t1, t2, t3) ((returnType) | ((t0)<<2) | ((t1)<<4) | ((t2)<<6) | ((t3)<<8))
-#define CALL5(returnType, t0, t1, t2, t3, t4) ((returnType) | ((t0)<<2) | ((t1)<<4) | ((t2)<<6) | ((t3)<<8) | ((t4)<<10))
-#define CALL6(returnType, t0, t1, t2, t3, t4, t5) ((returnType) | ((t0)<<2) | ((t1)<<4) | ((t2)<<6) | ((t3)<<8) | ((t4)<<10) | ((t5)<<12))
-#define CALL7(returnType, t0, t1, t2, t3, t4, t5, t6) ((returnType) | ((t0)<<2) | ((t1)<<4) | ((t2)<<6) | ((t3)<<8) | ((t4)<<10) | ((t5)<<12) | ((t6)<<14))
-#define CALL8(returnType, t0, t1, t2, t3, t4, t5, t6, t7) ((returnType) | ((t0)<<2) | ((t1)<<4) | ((t2)<<6) | ((t3)<<8) | ((t4)<<10) | ((t5)<<12) | ((t6)<<14) | ((t7)<<16))
-#define CALL9(returnType, t0, t1, t2, t3, t4, t5, t6, t7, t8) ((returnType) | ((t0)<<2) | ((t1)<<4) | ((t2)<<6) | ((t3)<<8) | ((t4)<<10) | ((t5)<<12) | ((t6)<<14) | ((t7)<<16) | ((t8)<<18))
-#define CALL10(returnType, t0, t1, t2, t3, t4, t5, t6, t7, t8, t9) ((returnType) | ((t0)<<2) | ((t1)<<4) | ((t2)<<6) | ((t3)<<8) | ((t4)<<10) | ((t5)<<12) | ((t6)<<14) | ((t7)<<16) | ((t8)<<18) | ((t9)<<20))
+#define CALL1(returnType, t0) ((returnType) | ((t0)<<3))
+#define CALL2(returnType, t0, t1) ((returnType) | ((t0)<<3) | ((t1)<<6))
+#define CALL3(returnType, t0, t1, t2) ((returnType) | ((t0)<<3) | ((t1)<<6) | ((t2)<<9))
+#define CALL4(returnType, t0, t1, t2, t3) ((returnType) | ((t0)<<3) | ((t1)<<6) | ((t2)<<9) | ((t3)<<12))
+#define CALL5(returnType, t0, t1, t2, t3, t4) ((returnType) | ((t0)<<3) | ((t1)<<6) | ((t2)<<9) | ((t3)<<12) | ((t4)<<15))
+#define CALL6(returnType, t0, t1, t2, t3, t4, t5) ((returnType) | ((t0)<<3) | ((t1)<<6) | ((t2)<<9) | ((t3)<<12) | ((t4)<<15) | ((t5)<<18))
+#define CALL7(returnType, t0, t1, t2, t3, t4, t5, t6) ((returnType) | ((t0)<<3) | ((t1)<<6) | ((t2)<<9) | ((t3)<<12) | ((t4)<<15) | ((t5)<<18) | ((t6)<<21))
+#define CALL8(returnType, t0, t1, t2, t3, t4, t5, t6, t7) ((returnType) | ((t0)<<3) | ((t1)<<6) | ((t2)<<9) | ((t3)<<12) | ((t4)<<15) | ((t5)<<18) | ((t6)<<21) | ((t7)<<24))
+#define CALL9(returnType, t0, t1, t2, t3, t4, t5, t6, t7, t8) ((returnType) | ((t0)<<3) | ((t1)<<6) | ((t2)<<9) | ((t3)<<12) | ((t4)<<15) | ((t5)<<18) | ((t6)<<21) | ((t7)<<24) | ((t8)<<27))
+#define CALL10(returnType, t0, t1, t2, t3, t4, t5, t6, t7, t8, t9) ((returnType) | ((t0)<<3) | ((t1)<<6) | ((t2)<<9) | ((t3)<<12) | ((t4)<<15) | ((t5)<<18) | ((t6)<<21) | ((t7)<<24) | ((t8)<<27) | ((t9)<<30))
 
-#define NOTHING 0
-#define SINGLE 1
-#define DOUBLE 2
-#define DEFAULT 3
+#define TP_INT32 1
+#define TP_INT64 2
+#define TP_FP32 3
+#define TP_FP64 4
 
-#define SET_ARG_TYPE(paramNum, type) funcParams |= (type << ((paramNum+1) << 1))
+//#define SET_ARG_TYPE(paramNum, type) funcParams |= (type << ((paramNum+1) << 1))
+//#define SET_ARG_TYPE(paramNum, type) funcParams |= (type << ((paramNum+1) * 2))
+#define SET_ARG_TYPE(paramNum, type) funcParams |= (type << ((paramNum+1) * 3))
 
 #define MAX_ARGS 16
 U32 PInvoke_Call(tJITCallPInvoke *pCall, PTR pParams, PTR pReturnValue, tThread *pCallingThread) {
-	U32 _args[MAX_ARGS];
+	U64 _args[MAX_ARGS];
 	double _argsd[MAX_ARGS];
 	void* _pTempMem[MAX_ARGS];
 	U32 numParams, param, paramTypeNum;
 	tMD_MethodDef *pMethod = pCall->pMethod;
 	tMD_TypeDef *pReturnType = pMethod->pReturnType;
 	tMD_ImplMap *pImplMap = pCall->pImplMap;
+#ifdef _EMSCRIPTEN
 	fnPInvoke pFn = pCall->fn;
+#else // _EMSCRIPTEN
+	void *pFn = pCall->fn;
+#endif // _EMSCRIPTEN
 	U32 _argOfs = 0, _argdOfs = 0, paramOfs = 0;
 	U32 _tempMemOfs = 0;
 	U32 i;
-	U32 funcParams = DEFAULT;
-	U64 u64Ret;
+	U64 funcParams = TP_INT32;
+	U32 uRet;
+	U64 xRet;
 	float fRet;
 	double dRet;
 
@@ -192,13 +200,25 @@ U32 PInvoke_Call(tJITCallPInvoke *pCall, PTR pParams, PTR pReturnValue, tThread 
 	U32 originalCallingThreadState = pCallingThread->state;
 	pCallingThread->state |= THREADSTATE_SUSPENDED;
 
+	int is_int64_returntype = 0;
+	if ( pReturnType == types[TYPE_SYSTEM_INTPTR] ) is_int64_returntype = 1;
+	if ( pReturnType == types[TYPE_SYSTEM_STRING] ) is_int64_returntype = 1;
+
 	if (pReturnType != NULL) {
 		if (pReturnType == types[TYPE_SYSTEM_SINGLE]) {
-			funcParams = SINGLE;
+			funcParams = TP_FP32;
 		} else if (pReturnType == types[TYPE_SYSTEM_DOUBLE]) {
-			funcParams = DOUBLE;
+			funcParams = TP_FP64;
+		} else if (is_int64_returntype) {
+			funcParams = TP_INT64;
 		}
 	}
+
+	int argShift = 0;
+
+#ifdef _EMSCRIPTEN
+
+	argShift = 2;
 
 	// Prepend the 'libName' and 'funcName' strings to the set of arguments
 	// NOTE: These aren't currently used in js-interop.js, but they would be if I found a way
@@ -206,14 +226,16 @@ U32 PInvoke_Call(tJITCallPInvoke *pCall, PTR pParams, PTR pReturnValue, tThread 
 	_args[0] = (U32)MetaData_GetModuleRefName(pCall->pMethod->pMetaData, pCall->pImplMap->importScope);
 	_args[1] = (U32)pCall->pMethod->name;
 	_argOfs += 2;
-	SET_ARG_TYPE(0, DEFAULT);
-	SET_ARG_TYPE(1, DEFAULT);
+	SET_ARG_TYPE(0, TP_INT32);
+	SET_ARG_TYPE(1, TP_INT32);
+
+#endif // _EMSCRIPTEN
 
 	numParams = pMethod->numberOfParameters;
-	for (param = 0, paramTypeNum = 0; param<numParams; param++, paramTypeNum++) {
+	for (param = 0, paramTypeNum = 0; param < numParams; param++, paramTypeNum++) {
 		tParameter *pParam = &(pMethod->pParams[param]);
 		tMD_TypeDef *pParamType = pParam->pTypeDef;
-		U32 paramType = DEFAULT;
+		U32 paramType = TP_INT32;
 
 		if (pParamType->stackType == EVALSTACK_INT32) {
 			_args[_argOfs] = *(U32*)(pParams + paramOfs);
@@ -231,29 +253,34 @@ U32 PInvoke_Call(tJITCallPInvoke *pCall, PTR pParams, PTR pReturnValue, tThread 
 			}
 			_pTempMem[_tempMemOfs] = pString;
 			_tempMemOfs++;
-			_args[_argOfs] = (U32)pString;
+			_args[_argOfs] = (U64)pString;
 			_argOfs++;
-			paramOfs += 4;
+			paramOfs += 8;
+			paramType = TP_INT64;
 		} else if (pParamType == types[TYPE_SYSTEM_INTPTR]) {
-			// Only works for 32-bit
-			_args[_argOfs] = *(U32*)(pParams + paramOfs);
+			// Only works for 32-bit -- FIXED???
+			_args[_argOfs] = *(U64*)(pParams + paramOfs);
 			_argOfs++;
-			paramOfs += 4;
+			paramOfs += 8;
+			paramType = TP_INT64;
 		} else if (pParamType == types[TYPE_SYSTEM_SINGLE]) {
 			_argsd[_argdOfs] = *(float*)(pParams + paramOfs);
 			_argdOfs++;
 			paramOfs += 4;
-			paramType = SINGLE;
+			paramType = TP_FP32;
 		} else if (pParamType == types[TYPE_SYSTEM_DOUBLE]) {
 			_argsd[_argdOfs] = *(double*)(pParams + paramOfs);
 			_argdOfs++;
 			paramOfs += 8;
-			paramType = DOUBLE;
+			paramType = TP_FP64;
 		} else {
 			Crash("PInvoke_Call() Cannot handle parameter of type: %s", pParamType->name);
 		}
-		SET_ARG_TYPE(paramTypeNum + 2, paramType);
+
+		SET_ARG_TYPE(paramTypeNum + argShift, paramType);
 	}
+
+#ifdef _EMSCRIPTEN
 
 	// [Steve edit] I'm hard-coding the pinvoke function pointer type here, as a workaround for
 	// Emscripten's function pointer limitations.
@@ -262,43 +289,50 @@ U32 PInvoke_Call(tJITCallPInvoke *pCall, PTR pParams, PTR pReturnValue, tThread 
 		Crash("PInvoke_Call() currently only supports calls of type 255; you tried to make a call of type %i.\n", funcParams);
 	}
 	int intRet = pFn((STRING)_args[0], (STRING)_args[1], (STRING)_args[2]);
-	u64Ret = (U64)intRet;
+	uRet = intRet; // TODO what the returnvalue means in this case?
 
-	/*
+#else // _EMSCRIPTEN
+
 	switch (funcParams) {
 
 #include "PInvoke_CaseCode.h"
 
-	case CALL5(DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT):
-		u64Ret = ((_uCuuuuu)(pFn))(_args[0], _args[1], _args[2], _args[3], _args[4]);
-		break;
+		case CALL5(TP_INT32, TP_INT32, TP_INT32, TP_INT32, TP_INT32, TP_INT32):
+			uRet = ((_uCuuuuu)(pFn))(_args[0], _args[1], _args[2], _args[3], _args[4]);
+			break;
 
-	case CALL6(DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT):
-		u64Ret = ((_uCuuuuuu)(pFn))(_args[0], _args[1], _args[2], _args[3], _args[4], _args[5]);
-		break;
+		case CALL6(TP_INT32, TP_INT32, TP_INT32, TP_INT32, TP_INT32, TP_INT32, TP_INT32):
+			uRet = ((_uCuuuuuu)(pFn))(_args[0], _args[1], _args[2], _args[3], _args[4], _args[5]);
+			break;
 
-	case CALL7(DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT):
-		u64Ret = ((_uCuuuuuuu)(pFn))(_args[0], _args[1], _args[2], _args[3], _args[4], _args[5], _args[6]);
-		break;
+		// for SDL_CreateWindow() 64bit.
+		case CALL6(TP_INT64, TP_INT64, TP_INT32, TP_INT32, TP_INT32, TP_INT32, TP_INT32):
+			uRet = ((_xCxuuuuu)(pFn))(_args[0], _args[1], _args[2], _args[3], _args[4], _args[5]);
+			break;
 
-	case CALL8(DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT):
-		u64Ret = ((_uCuuuuuuuu)(pFn))(_args[0], _args[1], _args[2], _args[3], _args[4], _args[5], _args[6], _args[7]);
-		break;
+		case CALL7(TP_INT32, TP_INT32, TP_INT32, TP_INT32, TP_INT32, TP_INT32, TP_INT32, TP_INT32):
+			uRet = ((_uCuuuuuuu)(pFn))(_args[0], _args[1], _args[2], _args[3], _args[4], _args[5], _args[6]);
+			break;
 
-	case CALL9(DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT):
-		u64Ret = ((_uCuuuuuuuuu)(pFn))(_args[0], _args[1], _args[2], _args[3], _args[4], _args[5], _args[6], _args[7], _args[8]);
-		break;
+		case CALL8(TP_INT32, TP_INT32, TP_INT32, TP_INT32, TP_INT32, TP_INT32, TP_INT32, TP_INT32, TP_INT32):
+			uRet = ((_uCuuuuuuuu)(pFn))(_args[0], _args[1], _args[2], _args[3], _args[4], _args[5], _args[6], _args[7]);
+			break;
 
-	case CALL10(DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT):
-		u64Ret = ((_uCuuuuuuuuuu)(pFn))(_args[0], _args[1], _args[2], _args[3], _args[4], _args[5], _args[6], _args[7], _args[8], _args[9]);
-		break;
+		case CALL9(TP_INT32, TP_INT32, TP_INT32, TP_INT32, TP_INT32, TP_INT32, TP_INT32, TP_INT32, TP_INT32, TP_INT32):
+			uRet = ((_uCuuuuuuuuu)(pFn))(_args[0], _args[1], _args[2], _args[3], _args[4], _args[5], _args[6], _args[7], _args[8]);
+			break;
 
-	default:
-		Crash("PInvoke_Call() Cannot handle the function parameters: %#x", funcParams);
+		case CALL10(TP_INT32, TP_INT32, TP_INT32, TP_INT32, TP_INT32, TP_INT32, TP_INT32, TP_INT32, TP_INT32, TP_INT32, TP_INT32):
+			uRet = ((_uCuuuuuuuuuu)(pFn))(_args[0], _args[1], _args[2], _args[3], _args[4], _args[5], _args[6], _args[7], _args[8], _args[9]);
+			break;
+
+		default:
+			Crash("PInvoke_Call() Cannot handle the function parameters: %#x", funcParams);
 	}
-	*/
 
-	for (i=0; i<_tempMemOfs; i++) {
+#endif // _EMSCRIPTEN
+
+	for (i = 0; i < _tempMemOfs; i++) {
 		free(_pTempMem[i]);
 	}
 
@@ -309,26 +343,26 @@ U32 PInvoke_Call(tJITCallPInvoke *pCall, PTR pParams, PTR pReturnValue, tThread 
 		return 0;
 	}
 	if (pReturnType->stackType == EVALSTACK_INT32) {
-		*(U32*)pReturnValue = (U32)u64Ret;
+		*(U32*)pReturnValue = uRet;
 		return 4;
 	}
 	if (pReturnType == types[TYPE_SYSTEM_STRING]) {
 		if (IMPLMAP_ISCHARSET_ANSI(pImplMap) || IMPLMAP_ISCHARSET_AUTO(pImplMap) || IMPLMAP_ISCHARSET_NOTSPEC(pImplMap)) {
-			*(HEAP_PTR*)pReturnValue = SystemString_FromCharPtrASCII((U8*)(U32)u64Ret);
+			*(HEAP_PTR*)pReturnValue = SystemString_FromCharPtrASCII((U8*)(U64)xRet);
 		} else if (IMPLMAP_ISCHARSET_UNICODE(pImplMap)) {
-			*(HEAP_PTR*)pReturnValue = SystemString_FromCharPtrUTF16((U16*)(U32)u64Ret);
+			*(HEAP_PTR*)pReturnValue = SystemString_FromCharPtrUTF16((U16*)(U64)xRet);
 		} else {
 			Crash("PInvoke_Call() Cannot handle return string in specified format");
 		}
 		return sizeof(void*);
 	}
 	if (pReturnType == types[TYPE_SYSTEM_INTPTR]) {
-		*(void**)pReturnValue = (void*)(U32)u64Ret;
+		*(void**)pReturnValue = (void*)(U64)xRet;
 		return sizeof(void*);
 	}
 	if (pReturnType == types[TYPE_SYSTEM_SINGLE]) {
-		*(double*)pReturnValue = (double)fRet;
-		return 8;
+		*(float*)pReturnValue = fRet;
+		return 4;
 	}
 	if (pReturnType == types[TYPE_SYSTEM_DOUBLE]) {
 		*(double*)pReturnValue = dRet;
@@ -338,3 +372,4 @@ U32 PInvoke_Call(tJITCallPInvoke *pCall, PTR pParams, PTR pReturnValue, tThread 
 	Crash("PInvoke_Call() Cannot handle return type: %s", pReturnType->name);
 	FAKE_RETURN;
 }
+

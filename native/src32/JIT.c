@@ -278,8 +278,12 @@ static U32* JITit(tMD_MethodDef *pMethodDef, U8 *pCIL, U32 codeSize, tParameter 
 
 	I32 i32Value;
 	U32 u32Value, u32Value2, ofs;
+
 	uConvFloat convFloat;
+	float floatValue;
 	uConvDouble convDouble;
+	double doubleValue;
+
 	tMD_TypeDef *pTypeA, *pTypeB;
 	PTR pMem;
 	tMetaData *pMetaData;
@@ -363,7 +367,7 @@ static U32* JITit(tMD_MethodDef *pMethodDef, U8 *pCIL, U32 codeSize, tParameter 
                 nextOpSequencePoint = -1;
             }
         }
-        
+
 		switch (op) {
 			case CIL_NOP:
                 {
@@ -443,17 +447,21 @@ cilLdcI4:
 
 			case CIL_LDC_R4:
 				convFloat.u32 = GetUnalignedU32(pCIL, &cilOfs);
+				// get the R32 result now, since the macros are using the SAME convFloat union.
+				floatValue = convFloat.f;
 				PushStackType(types[TYPE_SYSTEM_SINGLE]);
 				PushOp(JIT_LOAD_F32);
-				PushFloat(convFloat.f);
+				PushFloat(floatValue);
 				break;
 
 			case CIL_LDC_R8:
 				convDouble.u32.a = GetUnalignedU32(pCIL, &cilOfs);
 				convDouble.u32.b = GetUnalignedU32(pCIL, &cilOfs);
+				// get the R64 result now, since the macros are using the SAME convDouble union.
+				doubleValue = convDouble.d;
 				PushStackType(types[TYPE_SYSTEM_DOUBLE]);
 				PushOp(JIT_LOAD_F64);
-				PushDouble(convDouble.d);
+				PushDouble(doubleValue);
 				break;
 
 			case CIL_LDARG_0:
@@ -587,7 +595,7 @@ cilStLoc:
 				u32Value = TYPE_SYSTEM_DOUBLE;
 				goto cilLdInd;
 			case CIL_LDIND_REF:
-				u32Value = TYPE_SYSTEM_OBJECT;
+				u32Value = TYPE_SYSTEM_OBJECT; // for 32bit only.
 				goto cilLdInd;
 			case CIL_LDIND_I:
 				u32Value = TYPE_SYSTEM_INTPTR;
@@ -1534,6 +1542,21 @@ cilLeave:
 					
 				case CILX_RETHROW:
 					PushOp(JIT_RETHROW);
+					break;
+
+				case CILX_SIZEOF:
+// added 20230325 by TommiHassinen.
+// => IntPtr.ToString() or Console.Write() with an IntPtr parameter uses this.
+// => seems to work at 32bit at least, at 64bit there is a crash later when reading metadata.
+					{
+						tMD_TypeDef *pTypeDef;
+
+						u32Value = GetUnalignedU32(pCIL, &cilOfs);
+						pTypeDef = MetaData_GetTypeDefFromDefRefOrSpec(pMethodDef->pMetaData, u32Value, pMethodDef->pParentType->ppClassTypeArgs, pMethodDef->ppMethodTypeArgs);
+						PushOp(JIT_LOAD_I32);
+						PushU32(pTypeDef->instanceMemSize);
+						PushStackType(types[TYPE_SYSTEM_UINT32]);
+					}
 					break;
 
 				case CILX_CONSTRAINED:
