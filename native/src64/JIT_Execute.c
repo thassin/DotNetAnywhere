@@ -522,7 +522,6 @@ log_f( 3, "EXTRA_STACKPOINTER_CHANGE at line %d : change = %d    CreateParameter
 	log_f( 3, "DUMP_CALL_PARAMS for : %s.%s()\n", pCallMethod->pParentType->nameSpace, pCallMethod->name ); 
 	for ( int p = 0; p < pCallMethod->numberOfParameters; p++ ) {
 
-
 		tParameter *pParam = &(pCallMethod->pParams[p]);
 
 		tMD_TypeDef *pTypeDef = pParam->pTypeDef;
@@ -1295,7 +1294,12 @@ JIT_STOREINDIRECT_U32_end:
 	GO_NEXT();
 
 JIT_STOREINDIRECT_REF_start: // 64bit only.
-	Crash( "JIT_STOREINDIRECT_REF 64bit not implemented" );
+	OPCODE_USE(JIT_STOREINDIRECT_REF);
+	{
+		U64 value = POP_U64(); // The value to store
+		PTR pMem = POP_PTR(); // The address to store to
+		*(U64*)pMem = value;
+	}
 JIT_STOREINDIRECT_REF_end: // 64bit only.
 	GO_NEXT();
 
@@ -3539,7 +3543,7 @@ throwHeapPtr:
 				if (pEx->flags == COR_ILEXCEPTION_CLAUSE_EXCEPTION &&
 					pCatchMethodState->ipOffset - 1 >= pEx->tryStart &&
 					pCatchMethodState->ipOffset - 1 < pEx->tryEnd &&
-					Type_IsDerivedFromOrSame(pEx->u.pCatchTypeDef, pExType)) {
+					Type_IsDerivedFromOrSame(pEx->pCatchTypeDef, pExType)) {
 					
 					// Found the correct catch clause to jump to
 					pCatch = pEx;

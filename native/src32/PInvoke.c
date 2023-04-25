@@ -354,3 +354,4 @@ U32 PInvoke_Call(tJITCallPInvoke *pCall, PTR pParams, PTR pReturnValue, tThread 
 	Crash("PInvoke_Call() Cannot handle return type: %s", pReturnType->name);
 	FAKE_RETURN;
 }
+

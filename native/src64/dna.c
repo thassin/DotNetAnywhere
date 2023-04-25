@@ -28,7 +28,11 @@
 #include "Finalizer.h"
 #include "System.Net.Sockets.Socket.h"
 #include "MethodState.h"
+#include "InternalCall.h"
+
+#ifdef _EMSCRIPTEN
 #include "JSInterop.h"
+#endif // _EMSCRIPTEN
 
 static void ShowUsage() {
 	printf("Usage:\n");

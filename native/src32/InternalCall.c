@@ -226,7 +226,7 @@ void print_internalCall_debuginfo() {
 	int i = 0;
 	tInternalCall *pCall = internalCalls;
 	while ( pCall->method != NULL ) {
-		printf( "internalCall i=%d : %#llx %s\n", i++, pCall->fn, pCall->method );
+		printf( "internalCall i=%d : %#x %s\n", i++, pCall->fn, pCall->method );
 		pCall++;
 	}
 }

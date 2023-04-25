@@ -249,10 +249,8 @@ static U32 GenCombined(tOps *pOps, tOps *pIsDynamic, U32 startOfs, U32 count, U3
 }
 #endif
 
-static SetBreakPoint(tMD_MethodDef *pMethodDef, U32 cilOfs, tOps ops)
-{
-    
-}
+// 20230419 move into comments : never used, and no return type defined.
+//static SetBreakPoint(tMD_MethodDef *pMethodDef, U32 cilOfs, tOps ops) { }
 
 int JITit_call_counter = 0;
 
@@ -340,7 +338,7 @@ tMD_TypeDef *pTmpType;
 			pTypeStack->maxBytes = 4;
 			pTypeStack->ofs = 1;
 			pTypeStack->ppTypes = TMALLOC(tMD_TypeDef*);
-			pTypeStack->ppTypes[0] = pEx->u.pCatchTypeDef;
+			pTypeStack->ppTypes[0] = pEx->pCatchTypeDef;
 		}
 	}
 
@@ -1568,7 +1566,6 @@ cilLeave:
 				case CILX_SIZEOF:
 // added 20230325 by TommiHassinen.
 // => IntPtr.ToString() or Console.Write() with an IntPtr parameter uses this.
-// => seems to work at 32bit at least, at 64bit there is a crash later when reading metadata.
 					{
 						tMD_TypeDef *pTypeDef;
 
@@ -1770,14 +1767,30 @@ void JIT_Prepare(tMD_MethodDef *pMethodDef, U32 genCombinedOpcodes) {
 
 		pMethodHeader = pCIL + ((codeSize + 3) & (~0x3));
 		if (*pMethodHeader & CorILMethod_Sect_FatFormat) {
-			U32 exSize;
+
+// in 32bit version here tExceptionHeader struct is filled using a memcpy() call.
+// this is no longer possible in 64bit => fill the structs field-by-field instead.
+
 			// Fat header
+			tExceptionHeader *pExHeaders;
+			U32 exSize;
+
 			numClauses = ((*(U32*)pMethodHeader >> 8) - 4) / 24;
-			//pJITted->pExceptionHeaders = (tExceptionHeader*)(pMethodHeader + 4);
 			exSize = numClauses * sizeof(tExceptionHeader);
-			pJITted->pExceptionHeaders =
+			pMethodHeader += 4;
+			pExHeaders = pJITted->pExceptionHeaders =
 				(tExceptionHeader*)(genCombinedOpcodes?malloc(exSize):mallocForever(exSize));
-			memcpy(pJITted->pExceptionHeaders, pMethodHeader + 4, exSize);
+			for (i=0; i<numClauses; i++) {
+				pExHeaders[i].flags = ((U32*)pMethodHeader)[0];
+				pExHeaders[i].tryStart = ((U32*)pMethodHeader)[1];
+				pExHeaders[i].tryEnd = ((U32*)pMethodHeader)[2];
+				pExHeaders[i].handlerStart = ((U32*)pMethodHeader)[3];
+				pExHeaders[i].handlerEnd = ((U32*)pMethodHeader)[4];
+				pExHeaders[i].u.classToken = ((U32*)pMethodHeader)[5];
+
+				pMethodHeader += 24;
+			}
+
 		} else {
 			// Thin header
 			tExceptionHeader *pExHeaders;
@@ -1804,7 +1817,7 @@ void JIT_Prepare(tMD_MethodDef *pMethodDef, U32 genCombinedOpcodes) {
 		// replace all classToken's with the actual tMD_TypeDef*
 		for (i=0; i<numClauses; i++) {
 			if (pJITted->pExceptionHeaders[i].flags == COR_ILEXCEPTION_CLAUSE_EXCEPTION) {
-				pJITted->pExceptionHeaders[i].u.pCatchTypeDef =
+				pJITted->pExceptionHeaders[i].pCatchTypeDef =
 					MetaData_GetTypeDefFromDefRefOrSpec(pMethodDef->pMetaData, pJITted->pExceptionHeaders[i].u.classToken, pMethodDef->pParentType->ppClassTypeArgs, pMethodDef->ppMethodTypeArgs);
 			}
 		}

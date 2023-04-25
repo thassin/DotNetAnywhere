@@ -249,10 +249,8 @@ static U32 GenCombined(tOps *pOps, tOps *pIsDynamic, U32 startOfs, U32 count, U3
 }
 #endif
 
-static SetBreakPoint(tMD_MethodDef *pMethodDef, U32 cilOfs, tOps ops)
-{
-    
-}
+// 20230419 move into comments : never used, and no return type defined.
+//static SetBreakPoint(tMD_MethodDef *pMethodDef, U32 cilOfs, tOps ops) { }
 
 int JITit_call_counter = 0;
 
@@ -1547,7 +1545,6 @@ cilLeave:
 				case CILX_SIZEOF:
 // added 20230325 by TommiHassinen.
 // => IntPtr.ToString() or Console.Write() with an IntPtr parameter uses this.
-// => seems to work at 32bit at least, at 64bit there is a crash later when reading metadata.
 					{
 						tMD_TypeDef *pTypeDef;
 
@@ -1756,6 +1753,7 @@ void JIT_Prepare(tMD_MethodDef *pMethodDef, U32 genCombinedOpcodes) {
 			exSize = numClauses * sizeof(tExceptionHeader);
 			pJITted->pExceptionHeaders =
 				(tExceptionHeader*)(genCombinedOpcodes?malloc(exSize):mallocForever(exSize));
+// NOTICE here tExceptionHeader struct is filled using a memcpy() call => this won't work at 64bit.
 			memcpy(pJITted->pExceptionHeaders, pMethodHeader + 4, exSize);
 		} else {
 			// Thin header
@@ -1824,7 +1822,7 @@ void JIT_Prepare(tMD_MethodDef *pMethodDef, U32 genCombinedOpcodes) {
 	I32 *pSequencePoints;
 	pJITted->pOps = JITit(pMethodDef, pCIL, codeSize, pLocals, pJITted, genCombinedOpcodes, &pSequencePoints);
 #ifdef ENABLE_JITOPS_TYPEINFO
-	log_f( 3, "pJITted->pOpTypes=%#llx\n", pJITted->pOpTypes ); // the type information is already set in pJITted.
+	log_f( 3, "pJITted->pOpTypes=%#x\n", pJITted->pOpTypes ); // the type information is already set in pJITted.
 #endif // ENABLE_JITOPS_TYPEINFO
 	pJITted->pOpSequencePoints = pSequencePoints;
 

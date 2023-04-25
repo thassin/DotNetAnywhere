@@ -111,6 +111,10 @@ struct tJITted_ {
 #define COR_ILEXCEPTION_CLAUSE_FINALLY 2
 
 struct tExceptionHeader_ {
+
+// NOTICE this struct must remain constant in size and layout, because memcpy() is used
+// for filling this, see JIT_Prepare() at JIT.c line 1767 for example.
+
 	U32 flags;
 	U32 tryStart;
 	U32 tryEnd;

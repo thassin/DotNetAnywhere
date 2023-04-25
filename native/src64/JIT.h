@@ -112,6 +112,16 @@ struct tJITted_ {
 #define COR_ILEXCEPTION_CLAUSE_FINALLY 2
 
 struct tExceptionHeader_ {
+
+// NOTICE at 32bit version this struct is filled directly from metadata using a memcpy() call.
+// => this is no longer possible at 64bit version, because the struct size is no longer the same.
+// => this is because 1) the pointer grows to 64bit, and 2) padding bytes are added to struct for alignment.
+
+// in 64bit version the struct size is the same, if the pointer pCatchTypeDef is taken out of the union.
+// this is because 32bits of padding is needed anyway, if the pointer is located inside the union.
+
+// so, these values come directly from metadata:
+
 	U32 flags;
 	U32 tryStart;
 	U32 tryEnd;
@@ -122,9 +132,12 @@ struct tExceptionHeader_ {
 		IDX_TABLE classToken;
 		// Filter code offset for filter-based exception handler (not supported)
 		U32 filterOffset;
-		// The TypeDef of the catch type
-		tMD_TypeDef *pCatchTypeDef;
 	} u;
+
+// extra information, does not come directly from metadata.
+
+	// The TypeDef of the catch type
+	tMD_TypeDef *pCatchTypeDef;
 };
 
 typedef struct tJITCallNative_ tJITCallNative;

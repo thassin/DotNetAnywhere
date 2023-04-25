@@ -53,7 +53,7 @@ tJITCodeInfo jitCodeGoNext;
 
 static void checkOpType_func( int checkTypes, int sizeBytes, int line, PTR pCurOp, tMethodState *pCurrMethodState ) {
 
-	log_f( 3, "checkOpType_func() STARTING :: checkTypes=%d sizeBytes=%d line=%d pCurOp=%#llx\n", checkTypes, sizeBytes, line, pCurOp );
+	log_f( 3, "checkOpType_func() STARTING :: checkTypes=%d sizeBytes=%d line=%d pCurOp=%#x\n", checkTypes, sizeBytes, line, pCurOp );
 
 	long ofs32 = CURRENT_OPS_OFFSET();
 
@@ -3715,3 +3715,4 @@ void JIT_Execute_Init() {
 	// Initialise the JIT code addresses
 	JIT_Execute(NULL, 0);
 }
+
