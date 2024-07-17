@@ -5,7 +5,7 @@ namespace PInvokeTestApp
 {
     class MainClass
     {
-        private const string nativeLibName = "pinvoketest";
+        private const string nativeLibName = "libpinvoketest";
 
         [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
         public static extern void test1();
@@ -22,22 +22,29 @@ namespace PInvokeTestApp
         [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
         public static extern double test5(double x);
 
+        private const string TESTCASE = "PInvokeTestApp : ";
+
+        private const string TEST_PASSED = "test_passed";
+        private const string TEST_FAILED = "test_FAILED";
+
         public static void Main(string[] args)
         {
             test1();
 
             int test2result = test2( 3, 7 );
-            Console.WriteLine("test2 return value = " + test2result);
+            Console.WriteLine( TESTCASE + "test2 return value = " + test2result );
 
             string msg = "this is a test string!";
             string test3result = test3( msg );
-            Console.WriteLine("test3 return value = '" + test3result + "'");
+            Console.WriteLine( TESTCASE + "test3 return value = '" + test3result + "'" );
 
             float test4result = test4( 1.234f );
-            Console.WriteLine("test4 return value = " + test4result);
+            Console.WriteLine( TESTCASE + "test4 return value = " + test4result );
 
             double test5result = test5( 23.45 );
-            Console.WriteLine("test5 return value = " + test5result);
-        }
+            Console.WriteLine( TESTCASE + "test5 return value = " + test5result );
+
+            Console.WriteLine( TESTCASE +  TEST_PASSED );
+       }
     }
 }

@@ -1,5 +1,7 @@
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 void test1( void ) {
 	printf( "libpinvoketest.so :: test1\n" );
@@ -16,7 +18,15 @@ static const char test3response[] = "response text from test3.";
 const char * test3( const char * message ) {
 	printf( "libpinvoketest.so :: stringTest1 :: %#llx\n", (void *) message );
 	printf( "libpinvoketest.so :: stringTest1 :: '%s'\n", message );
-	return test3response;
+
+	// allocate memory for the response using malloc(), the runtime should call free() on it.
+	// => that's how it goes with mono.
+
+	char * buffer = malloc( strlen( test3response ) );
+	strcpy( buffer, test3response );
+
+	//return test3response;
+	return buffer;
 }
 
 float test4( float x ) {
