@@ -2,7 +2,7 @@
 
 DotNetAnywhere (DNA) is a small interpreted .NET CIL runtime. The original [code](https://github.com/chrisdunelm/DotNetAnywhere) by Chris Bacon has been adjusted by Steve Sanderson in his first versions of [Blazor](https://blazor.net), and this version related to WebAssembly is available [here](https://github.com/boyanio/DotNetAnywhere).
 
-This version adds porting to 64-bit platforms, and some debugging options. The 64-bit port is not yet complete, or thoroughly tested, for some examples which work see the `testcases_passing_64bit` folder. Expect more testcases to appear there in the future.
+This version adds porting to 64-bit platforms, and some debugging options. The 64-bit port is not yet complete, or thoroughly tested, for some examples which work see the `tests_passing_64bit` folder. Expect more testcases to appear there in the future.
 
 ## Build
 
@@ -20,4 +20,8 @@ make
 ```
 
 The executable `dna64` is generated in the `native/src64` folder.
+
+## Testing
+
+There are scripts in `corlib` and `tests_passing_64bit` folders which build the files using Mono `mcs` compiler and copy the results into `tests_BIN` folder.
 

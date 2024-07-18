@@ -10,13 +10,19 @@ namespace Test01 {
         private const string TEST_FAILED = "test_FAILED";
 
         static void Main( string[] args ) {
-            Console.WriteLine( TESTCASE +  "args count = " + args.Length );
+            Console.WriteLine( TESTCASE + "test looping over args-array." );
 
-            for ( int i = 0; i < args.Length; i++ ) {
-                Console.WriteLine( TESTCASE +  "argument at index " + i + " is '" + args[i] + "'.");
+            Console.WriteLine( TESTCASE + "args-array length = " + args.Length );
+
+            if ( args.Length == 0 ) {
+                Console.WriteLine( TESTCASE + "NOTICE try setting some COMMANDLINE-OPTIONS for this test!" );
             }
 
-            Console.WriteLine( TESTCASE +  TEST_PASSED );
+            for ( int i = 0; i < args.Length; i++ ) {
+                Console.WriteLine( TESTCASE + "argument at index " + i + " is '" + args[i] + "'.");
+            }
+
+            Console.WriteLine( TESTCASE + TEST_PASSED );
         }
     }
 

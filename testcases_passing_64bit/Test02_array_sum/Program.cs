@@ -10,7 +10,7 @@ namespace Test02 {
         private const string TEST_FAILED = "test_FAILED";
 
         static void Main(string[] args) {
-            Console.WriteLine( TESTCASE +  "test looping, array-usage, methodcall." );
+            Console.WriteLine( TESTCASE + "test looping, array-usage, methodcall." );
 
             const int sz = 100;
 
@@ -20,8 +20,8 @@ namespace Test02 {
             }
 
             int sum = 0;
-// taitaa puuttua tällainen konversio:
-// 0xD4 	conv.ovf.i 	Convert to a native int (on the stack as native int) and throw an exception on overflow. SIIS long => int.
+// FIXME there is no conversion like this?!? cast from int to long:
+// 0xD4 	conv.ovf.i 	Convert to a native int (on the stack as native int) and throw an exception on overflow.
             //for ( long x = 0; x < (long) sz; x++ ) {
             for ( int x = 0; x < sz; x++ ) {
                 sum += arr[x];
