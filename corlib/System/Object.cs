@@ -23,6 +23,13 @@
 using System.Runtime.CompilerServices;
 
 namespace System {
+
+// in principle Object implements ICloneable but:
+// ./System/Object.cs(27,15): error CS0537: The class System.Object cannot have a base class or implement an interface.
+// => AND the Clone() method is internal.
+
+// for some reason the mcs compiler has difficulty to handle object.Clone() but Object.Clone() works OK.
+
 	public class Object {
 
 		public Object() {

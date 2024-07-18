@@ -85,7 +85,8 @@ namespace System.Text {
 		#region ICloneable Members
 
 		public object Clone() {
-			return (Encoding)object.Clone(this);
+		//	return (Encoding)object.Clone(this); // mcs error CS1525: Unexpected symbol `object'
+			return (Encoding)Object.Clone(this);
 		}
 
 		#endregion

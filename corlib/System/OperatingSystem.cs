@@ -88,7 +88,8 @@ namespace System {
 		#region ICloneable Members
 
 		public object Clone() {
-			return (OperatingSystem)object.Clone(this);
+			//return (OperatingSystem)object.Clone(this); // mcs error CS1525: Unexpected symbol `object'
+			return (OperatingSystem)Object.Clone(this);
 		}
 
 		#endregion
