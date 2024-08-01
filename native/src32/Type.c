@@ -163,7 +163,8 @@ static void CreateNewArrayType(tMD_TypeDef *pNewArrayType, tMD_TypeDef *pElement
 		pInterfaceMap->ppMethodVLookup[4] = Generics_GetMethodDefFromCoreMethod(ppGenericArrayMethods[GENERICARRAYMETHODS_Internal_GenericSetItem], pNewArrayType, 1, &pElementType);
 	}
 
-	log_f(2, "Array: Array[%s.%s]\n", pElementType->nameSpace, pElementType->name);
+	//log_f(2, "Array: Array[%s.%s]\n", pElementType->nameSpace, pElementType->name);
+	log_f(2, "createtype Array: Array[%s.%s]\n", pElementType->nameSpace, pElementType->name);
 }
 
 // Returns a TypeDef for an array to the given element type
@@ -442,6 +443,13 @@ void Type_Init() {
 			// Special initialisation for arrays of particular types.
 			// NOTICE tTypeInit.name is either a string, or one of the TYPE_xx numeric constants.
 			types[i] = Type_GetArrayTypeDef(types[(U32)(typeInit[i].name)], NULL, NULL);
+			if ( (U32)(typeInit[i].name) < 100 ) {
+				// tTypeInit.name is a numeric TYPE_xx constant.
+				log_f( 1, "at Type_Init :: i=%d name %d => %s.%s\n", (int)i, (int)typeInit[i].name, types[i]->nameSpace, types[i]->name );
+			} else {
+				// tTypeInit.name is a string.
+				log_f( 1, "at Type_Init :: i=%d name %s => %s.%s\n", (int)i, typeInit[i].name, types[i]->nameSpace, types[i]->name );
+			}
 		}
 	}
 	CorLibDone = 1;

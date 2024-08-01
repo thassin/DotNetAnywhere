@@ -143,8 +143,10 @@ tMethodState* MethodState_Direct(tThread *pThread, tMD_MethodDef *pMethod, tMeth
 	U32 extraBytes = 0;
 
 #ifdef ENABLE_STACKITEMS_TYPEINFO
+	Assert((maxStack & 0x3) == 0); // 32-bit blocks only.
+	// allocate 1 typeinfo byte for each 4 bytes of data.
 	extraBytes = maxStack >> 2;
-	// adjust to nearest 4-byte boundary.
+	// adjust/increase to nearest 4-byte boundary.
 	extraBytes >>= 2;
 	extraBytes++;
 	extraBytes <<= 2;
@@ -162,8 +164,24 @@ tMethodState* MethodState_Direct(tThread *pThread, tMD_MethodDef *pMethod, tMeth
 	pThis->pNextDelegate = NULL;
 	pThis->pDelegateParams = NULL;
 
-	pThis->pParamsLocals = (PTR)Thread_StackAlloc(pThread, pMethod->parameterStackSize + pMethod->pJITted->localsStackSize);
-	memset(pThis->pParamsLocals, 0, pMethod->parameterStackSize + pMethod->pJITted->localsStackSize);
+#ifdef ENABLE_STACKITEMS_TYPEINFO
+	int paramsLocalsSize = pMethod->parameterStackSize + pMethod->pJITted->localsStackSize;
+	Assert((paramsLocalsSize & 0x3) == 0); // 32-bit blocks only.
+	// allocate 1 typeinfo byte for each 4 bytes of data.
+	extraBytes = ( paramsLocalsSize ) >> 2;
+	// adjust/increase to nearest 4-byte boundary.
+	extraBytes >>= 2;
+	extraBytes++;
+	extraBytes <<= 2;
+#endif // ENABLE_STACKITEMS_TYPEINFO
+
+	pThis->pParamsLocals = (PTR)Thread_StackAlloc(pThread, paramsLocalsSize + extraBytes);
+	memset(pThis->pParamsLocals, 0, paramsLocalsSize);
+	
+#ifdef ENABLE_STACKITEMS_TYPEINFO
+	pThis->pParamsLocalsTypeInfo = pThis->pParamsLocals + paramsLocalsSize;
+	for ( int clear = 0; clear < extraBytes; clear++ ) pThis->pParamsLocalsTypeInfo[clear] = 0;
+#endif // ENABLE_STACKITEMS_TYPEINFO
 
 #ifdef GEN_COMBINED_OPCODES
 	AddCall(pMethod);

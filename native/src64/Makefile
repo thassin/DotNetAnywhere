@@ -1,9 +1,11 @@
 
 CC =		gcc
+##CC =		clang
 
 CFLAGS=		-Wno-pointer-sign -Os -I. -Wall -g \
 		-DENABLE_JITOPS_TYPEINFO \
-		-DENABLE_STACKITEMS_TYPEINFO
+		-DENABLE_STACKITEMS_TYPEINFO \
+		-D_DEBUG
 
 LDFLAGS=	-ldl -lm
 

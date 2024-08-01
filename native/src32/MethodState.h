@@ -44,6 +44,9 @@ struct tMethodState_ {
 	U32 stackOfs;
 	// This method's parameters & local variable storage. Params are first, followed by locals
 	PTR pParamsLocals;
+#ifdef ENABLE_STACKITEMS_TYPEINFO
+	PTR pParamsLocalsTypeInfo;
+#endif // ENABLE_STACKITEMS_TYPEINFO
 	// Is this methodstate from a NEWOBJ op-code?
 	U32 isInternalNewObjCall;
 	// If this is a Finalizer, then the 'this' object goes here,

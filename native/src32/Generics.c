@@ -32,8 +32,8 @@ void Generic_GetHeapRoots(tHeapRoots *pHeapRoots, tMD_TypeDef *pTypeDef) {
 	tGenericInstance *pInst = pTypeDef->pGenericInstances;
 	while (pInst != NULL) {
 		tMD_TypeDef *pTypeDef = pInst->pInstanceTypeDef;
-		if (pTypeDef->staticFieldSize > 0) {
-			Heap_SetRoots(pHeapRoots, pTypeDef->pStaticFields, pTypeDef->staticFieldSize);
+		if (pTypeDef->staticFieldSize_refTypeFields > 0) {
+			Heap_SetRoots(pHeapRoots, pTypeDef->pStaticFields, NULL, pTypeDef->staticFieldSize_refTypeFields, 31);
 		}
 		pInst = pInst->pNext;
 	}

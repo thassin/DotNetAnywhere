@@ -345,6 +345,8 @@ static U32* JITit(tMD_MethodDef *pMethodDef, U8 *pCIL, U32 codeSize, tParameter 
 
 	cilOfs = 0;
 
+	U8 dynamicallyBoxReturnValue; // 20240731 moved here from the original position.
+
 	int nextOpSequencePoint = -1;
 	do {
 		U8 op;
@@ -622,7 +624,11 @@ cilLdInd:
 					tMD_MethodDef *pCallMethod;
 					tMD_TypeDef *pBoxCallType;
 					U32 derefRefType;
-					U8 dynamicallyBoxReturnValue = 0;
+
+	// 20240731 valgrind reported use of uninitialised variable here.
+	// => problem related to use of "cilCallVirtConstrained" goto-label, which bypasses initialization.
+	// => variable "dynamicallyBoxReturnValue" definition is moved outside the big while-loop.
+					dynamicallyBoxReturnValue = 0;
 
 					u32Value2 = 0;
 

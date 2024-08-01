@@ -6,6 +6,10 @@ using System.Text;
 namespace System {
 	public struct DateTime : IFormattable, IComparable, IComparable<DateTime>, IEquatable<DateTime> {
 
+		// 20240723 define static reference-type fields first.
+		private static readonly int[] daysMonth = { 0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+		private static readonly int[] daysMonthLeap = { 0, 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+
 		public static readonly DateTime MinValue = new DateTime(0);
 		public static readonly DateTime MaxValue = new DateTime(3155378975999999999L);
 
@@ -14,9 +18,6 @@ namespace System {
 
 		private TimeSpan ticks;
 		private DateTimeKind kind;
-
-		private static readonly int[] daysMonth = { 0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
-		private static readonly int[] daysMonthLeap = { 0, 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 
 		private static int AbsoluteDays(int year, int month, int day) {
 			int[] days;

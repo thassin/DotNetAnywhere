@@ -79,18 +79,18 @@ void* Thread_StackAlloc(tThread *pThread, U32 size) {
 	tThreadStack *pStack = pThread->pThreadStack;
 	void *pAddr = pStack->memory + pStack->ofs;
 #if _DEBUG
-	*(U32*)pAddr = 0xabababab;
-	((U32*)pAddr)++;
-	pStack->ofs += 4;
+//	*(U32*)pAddr = 0xabababab;
+//	((U32*)pAddr)++;
+//	pStack->ofs += 4;
 #endif
 	pStack->ofs += size;
 	if (pStack->ofs > THREADSTACK_CHUNK_SIZE) {
 		Crash("Thread-local stack is too large");
 	}
 #if _DEBUG
-	memset(pAddr, 0xcd, size);
-	*(U32*)(((char*)pAddr) + size) = 0xfbfbfbfb;
-	pStack->ofs += 4;
+//	memset(pAddr, 0xcd, size);
+//	*(U32*)(((char*)pAddr) + size) = 0xfbfbfbfb;
+//	pStack->ofs += 4;
 #endif
 	return pAddr;
 }
@@ -98,8 +98,8 @@ void* Thread_StackAlloc(tThread *pThread, U32 size) {
 void Thread_StackFree(tThread *pThread, void *pAddr) {
 	tThreadStack *pStack = pThread->pThreadStack;
 #if _DEBUG
-	((U32*)pAddr)--;
-	memset(pAddr, 0xfe, pStack->ofs - (U32)(((unsigned char*)pAddr) - pStack->memory));
+//	((U32*)pAddr)--;
+//	memset(pAddr, 0xfe, pStack->ofs - (U32)(((unsigned char*)pAddr) - pStack->memory));
 #endif
 	pStack->ofs = (U32)(((unsigned char*)pAddr) - pStack->memory);
 }
@@ -292,11 +292,15 @@ void Thread_GetHeapRoots(tHeapRoots *pHeapRoots) {
 
 		pMethodState = pThread->pCurrentMethodState;
 		while (pMethodState != NULL) {
+
 			// Put the evaluation stack on the roots
-			Heap_SetRoots(pHeapRoots, pMethodState->pEvalStack, pMethodState->pMethod->pJITted->maxStack);
+			Heap_SetRoots(pHeapRoots, pMethodState->pEvalStack, pMethodState->pEvalStackTypeInfo, pMethodState->pMethod->pJITted->maxStack, 11);
+
+			//JIT_PrintEvalStackDump( pMethodState, pMethodState->pMethod->pJITted->maxStack, 10000 + __LINE__, 0 );
+
 			// Put the params/locals on the roots
-			Heap_SetRoots(pHeapRoots, pMethodState->pParamsLocals,
-				pMethodState->pMethod->parameterStackSize+pMethodState->pMethod->pJITted->localsStackSize);
+			Heap_SetRoots(pHeapRoots, pMethodState->pParamsLocals, pMethodState->pParamsLocalsTypeInfo,
+				pMethodState->pMethod->parameterStackSize + pMethodState->pMethod->pJITted->localsStackSize, 12);
 
 			pMethodState = pMethodState->pCaller;
 		}

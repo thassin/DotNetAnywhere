@@ -116,9 +116,9 @@ struct tMD_TypeDef_ {
 	// Pointer to the memory for any static fields in this type. This will be NULL if type has no static fields
 	PTR pStaticFields;
 
-// these 4x 8bit values are written as a one single 32-bit value?!?
-// these 4x 8bit values are written as a one single 32-bit value?!?
-// these 4x 8bit values are written as a one single 32-bit value?!?
+// these 4x 8bit U8-values are written as a one single 32-bit value?!?
+// these 4x 8bit U8-values are written as a one single 32-bit value?!?
+// these 4x 8bit U8-values are written as a one single 32-bit value?!?
 // => so this works as intended only in little-endian systems?!?
 	// Has the static constructor been executed yet?
 	U8 isTypeInitialised;
@@ -168,6 +168,12 @@ struct tMD_TypeDef_ {
 	// Pointer to the heap object which is the Type class object for this type.
 	// This is only allocated as needed, so defaults to NULL
 	HEAP_PTR typeObject;
+
+	// The memory needed for static reference-type fields, in bytes (added 2024-07-23).
+	// => it is required that reference-type fields are BEFORE value-type fields in pStaticFields.
+	// => this field is NOT read from the binary metadata, it is set otherwise.
+	U32 staticFieldSize_refTypeFields;
+
 };
 #define MD_TABLE_TYPEDEF 0x02
 

@@ -38,6 +38,8 @@
 #include "System.Reflection.MethodBase.h"
 #include "System.Diagnostics.Debugger.h"
 
+#define CRASH_ON_ERRORS
+
 // Global array which stores the absolute addresses of the start and end of all JIT code
 // fragment machine code.
 tJITCodeInfo jitCodeInfo[JIT_OPCODE_MAXNUM];
@@ -51,42 +53,45 @@ tJITCodeInfo jitCodeGoNext;
 
 #ifdef ENABLE_JITOPS_TYPEINFO
 
+#define CHECK_OP_TYPE( checkTypes, sizeBytes ) \
+	checkOpType_func( checkTypes, sizeBytes, __LINE__, (PTR)pCurOp, pCurrentMethodState )
+
 static void checkOpType_func( int checkTypes, int sizeBytes, int line, PTR pCurOp, tMethodState *pCurrMethodState ) {
 
-	log_f( 3, "checkOpType_func() STARTING :: checkTypes=%d sizeBytes=%d line=%d pCurOp=%#x\n", checkTypes, sizeBytes, line, pCurOp );
-
-	long ofs32 = CURRENT_OPS_OFFSET();
-
-	if ( checkTypes != 0 ) {
-
-		// there is no type information related to Native or PInvoke calls (pJIT->pOpTypes is NULL).
-		// => this is only related to GET_OP_32() call which is made inside the GO_NEXT() macro.
-
-		if ( pCurrMethodState->pJIT->pOpTypes == NULL ) {
-			log_f( 3, "    SKIP checkOpType because pJIT->pOpTypes is unset (is Native or PInvoke call).\n" );
-			return;
-		}
-
-		long ofs8 = ofs32 >> 2;
-
-		U8 typeInfo = *(U8*)(pCurrMethodState->pJIT->pOpTypes + ofs8);
-
-		if ( checkTypes & typeInfo == 0 ) {
-			Crash( "at line %d checkOpType_func() failed: checkTypes=%d typeInfo=%d", line, checkTypes, typeInfo );
-		}
-
-		log_f( 3, "checkOpType_func() COMPLETED :: typeInfo = %d\n", typeInfo );
+	// there is no type information related to Native or PInvoke calls (pJIT->pOpTypes is NULL).
+	// => this is only related to GET_OP_32() call which is made inside the GO_NEXT() macro.
+	if ( pCurrMethodState->pJIT->pOpTypes == NULL ) {
+		log_f( 3, "SKIP checkOpType because pJIT->pOpTypes is unset (is Native or PInvoke call).\n" );
+		return;
 	}
 
+	log_f( 3, "checkOpType_func() STARTING :: checkTypes=%d sizeBytes=%d line=%d pCurOp=%#x\n", (int)checkTypes, (int)sizeBytes, (int)line, (U32)pCurOp );
+
+	long ofs32 = CURRENT_OPS_OFFSET();
+	//log_f( 0, "checkOpType_func() CURRENT_OPS_OFFSET = %d\n", (int)ofs32 );
+
+	long ofs8 = ofs32 >> 2;
+	U8 typeInfo = *(U8*)(pCurrMethodState->pJIT->pOpTypes + ofs8);
+
+	// 20240730 these seem to work at beginning, but later
+	// will get messed up => is the OPS data updated somewhere?
+
+/*	if ( checkTypes != 0 ) {
+		if ( ( checkTypes & typeInfo ) == 0 ) {
+			log_f( 0, "at line %d checkOpType_func() failed: checkTypes=%d typeInfo=%d\n", (int)line, (int)checkTypes, (int)typeInfo );
+		} else {
+			log_f( 0, "at line %d checkOpType_func() OK: checkTypes=%d typeInfo=%d\n", (int)line, (int)checkTypes, (int)typeInfo );
+		}
+		log_f( 3, "checkOpType_func() COMPLETED :: typeInfo = %d\n", (int)typeInfo );
+	}	*/
+
 	if ( sizeBytes == 4 ) {
-		log_f( 3, "checkOpType_func() :: current OPS_32 value is %#x\n", *(U32*)(pCurOp) );
+		U32 tmp = *(U32*)(pCurOp);
+		log_f( 3, "checkOpType_func() :: current OPS_32 value is %#x\n", tmp );
 	} else {
 		Crash( "checkOpType_func() : sizeBytes has unexpected value %d\n", sizeBytes );
 	}
 }
-
-#define CHECK_OP_TYPE( checkTypes, sizeBytes ) \
-	checkOpType_func( checkTypes, sizeBytes, __LINE__, pCurOp, pCurrentMethodState )
 
 #else // ENABLE_JITOPS_TYPEINFO
 
@@ -101,81 +106,200 @@ static void checkOpType_func( int checkTypes, int sizeBytes, int line, PTR pCurO
 
 #ifdef ENABLE_STACKITEMS_TYPEINFO
 
-static int parseStackTypeInfo_type( U8 typeInfo ) {
+int JIT_ParseStackTypeInfo_type( U8 typeInfo ) {
 	return ( (int) typeInfo ) >> 6;
 }
 
-static int parseStackTypeInfo_size( U8 typeInfo ) {
+int JIT_ParseStackTypeInfo_size( U8 typeInfo ) {
 	int size = ( (int) typeInfo ) & STACKITEM_SIZE_MASK;
-	if ( size >= 63 ) Crash( "parseStackTypeInfo_size() :: liian iso arvo: %d", size );
 	int sizeBytes = ( size + 1 ) << 2;
 	return sizeBytes;
 }
 
-static int getTypeFromTypeDef( tMD_TypeDef *typeDef ) {
-	return 1;
+#define PRINT_EVALSTACK_DUMP() \
+	JIT_PrintEvalStackDump( pCurrentMethodState, (int)(CURRENT_STACK_OFFSET()), __LINE__, 0 )
+
+void JIT_PrintEvalStackDump( tMethodState* pMethodState, int upToOffsetB, int lineNumber, int printCrashDump ) {
+
+	// upToOffsetB is the count of bytes currently stored in evalStack.
+	// printCrashDump is set to non-zero to force output at loglevel-0.
+	
+	int logLevel = 3;
+	if ( printCrashDump != 0 ) logLevel = 0;
+
+if ( printCrashDump == 1234 ) { // MAGIC numberi jolla saa pakotettua tulostuksen mutta ilman Crash() kutsua.
+	printCrashDump = 0; // ei tehdä Crash() -kutsua.
+	logLevel = 2; // haluttu lokitustaso.
 }
 
-static void printStackDump_func( tMethodState* pCurrMethodState, long ofs32 ) {
+	PTR ptrData = pMethodState->pEvalStack;
+	PTR ptrInfo = pMethodState->pEvalStackTypeInfo;
 
-	PTR ptrData = pCurrMethodState->pEvalStack;
-	PTR ptrInfo = pCurrMethodState->pEvalStackTypeInfo;
+	log_f( logLevel, "\n" );
+	log_f( logLevel, "*** EVAL-STACK-DUMP ***    instance=%#x    upToOffset=%d    lineNumber=%d\n", ptrData, upToOffsetB, lineNumber );
 
 	int error = 0;
 
-	if ( ofs32 < 0 ) error = 1;
-	if ( ofs32 % 4 != 0 ) error = 1;
+	if ( upToOffsetB < 0 ) {
+		log_f( logLevel, "EVAL-stack-ERROR: upToOffsetB %d is negative\n", upToOffsetB );
+		error = 1;
+        }
 
-	long ofs8 = (ofs32 >> 2);
-	
-	log_f( 3, "\n" );
-
-	log_f( 3, "*** STACK DUMP ***    instance=%#x    ofs32=%d    ", ptrData, ofs32 );
-	if ( error ) log_f( 3, "stackERROR\n" );
-	else log_f( 3, "ok\n" );
+	if ( upToOffsetB % 4 != 0 ) {
+		log_f( logLevel, "EVAL-stack-ERROR: upToOffsetB %d is not 32-bit aligned\n", upToOffsetB );
+		error = 1;
+	}
 
 	int type = 0;
 	int size = 0;
 
-	for ( long i = 0;i < ofs32; i+= 4 ) {
+	int prev_type = 0;
+	int prev_size = 4; // default value 4 won't trigger the previous-type check.
+
+	for ( int i = 0; i < upToOffsetB; i+= 4 ) {
 
 		U8 typeInfo = *(U8*)ptrInfo;
 		ptrInfo++;
 
-		type = parseStackTypeInfo_type( typeInfo );
-		size = parseStackTypeInfo_size( typeInfo );
+		type = JIT_ParseStackTypeInfo_type( typeInfo );
+		size = JIT_ParseStackTypeInfo_size( typeInfo );
 
 		U32 data = *(U32*)ptrData;
 		ptrData += 4;
 
-		log_f( 3, "byte-offset = %d : data=%#x type=%d sizeinfo=%d\n", i, data, type, size );
+		log_f( logLevel, "*** EVAL-STACK-DUMP : byte-offset = %d : data=%#x type=%d sizeinfo=%d\n", i, data, type, size );
+
+		if ( prev_size != 4 ) {
+			// previous type must be the same as current:
+			if ( prev_type != type ) {
+				log_f( logLevel, "EVAL-stack-ERROR: type-mismatch detected: %d vs %d\n", prev_type, type );
+				error = 1;
+			}
+			// previous size must be the current size + 4 bytes:
+			if ( prev_size != size + 4 ) {
+				log_f( logLevel, "EVAL-stack-ERROR: size-mismatch detected: %d vs %d\n", prev_size, size );
+				error = 1;
+			}
+		}
+
+		prev_type = type;
+		prev_size = size;
 	}
 
 	if ( size > 4 ) {
-		log_f( 3, "stackERROR: the last stackitem is truncated!\n" );
+		log_f( logLevel, "EVAL-stack-ERROR: the last stackitem is truncated: size=%d\n", size );
+		error = 1;
 	}
 
-	log_f( 3, "\n" );
+	if ( printCrashDump != 0 ) Crash( "EVAL-stack-ERROR: errors detected" );
+
+#ifdef CRASH_ON_ERRORS
+	if ( error != 0 ) {
+		// call the same method again, setting the crash-flag, to get forced output.
+		JIT_PrintEvalStackDump( pMethodState, upToOffsetB, lineNumber, 1 ); // this will call Crash().
+	}
+#endif // CRASH_ON_ERRORS
+
+	log_f( logLevel, "\n" );
 }
 
-#define PRINT_STACKDUMP() \
-	printStackDump_func( pCurrentMethodState, (long)CURRENT_STACK_OFFSET() )
+void PrintPLStackDump( tMethodState* pMethodState, int upToOffsetB, int lineNumber, int printCrashDump ) {
 
-static void pushStackItemType_func( int dataSize, int shift, int type, tMethodState* pCurrMethodState, long ofs32 ) {
+	// upToOffsetB is the count of bytes currently stored in evalStack.
+	// printCrashDump is set to non-zero to force output at loglevel-0.
+	
+	int logLevel = 3;
+	if ( printCrashDump != 0 ) logLevel = 0;
 
-	if ( dataSize % 4 != 0 ) Crash( "pushStackTypeInfo() :: bad dataSize %d", dataSize );
-	if ( type < 1 || type > 3 ) Crash( "pushStackTypeInfo() :: bad type %d", type );
+	PTR ptrData = pMethodState->pParamsLocals;
+	PTR ptrInfo = pMethodState->pParamsLocalsTypeInfo;
 
-log_f( 3, "pushStackItemType_func() :: dataSize=%d shift=%d type=%d ofs32=%d :: ", dataSize, shift, type, ofs32 );
+	log_f( logLevel, "\n" );
+	log_f( logLevel, "*** PL-STACK-DUMP ***    instance=%#x    upToOffset=%d\n", ptrData, upToOffsetB );
 
-	U8* pCurrentTypeInfo = pCurrMethodState->pEvalStackTypeInfo;
-	pCurrentTypeInfo += ( ( ofs32 + shift ) >> 2 );
+	int error = 0;
+
+	if ( upToOffsetB < 0 ) {
+		log_f( logLevel, "PL-stack-ERROR: upToOffsetB %d is negative\n", upToOffsetB );
+		error = 1;
+        }
+
+	if ( upToOffsetB % 4 != 0 ) {
+		log_f( logLevel, "PL-stack-ERROR: upToOffsetB %d is not 32-bit aligned\n", upToOffsetB );
+		error = 1;
+	}
+
+	int type = 0;
+	int size = 0;
+
+	int prev_type = 0;
+	int prev_size = 4; // default value 4 won't trigger the previous-type check.
+
+	for ( int i = 0; i < upToOffsetB; i+= 4 ) {
+
+		U8 typeInfo = *(U8*)ptrInfo;
+		ptrInfo++;
+
+		type = JIT_ParseStackTypeInfo_type( typeInfo );
+		size = JIT_ParseStackTypeInfo_size( typeInfo );
+
+		U32 data = *(U32*)ptrData;
+		ptrData += 4;
+
+		log_f( logLevel, "*** PL-STACK-DUMP : byte-offset = %d : data=%#x type=%d sizeinfo=%d\n", i, data, type, size );
+
+		if ( prev_size != 4 ) {
+			// previous type must be the same as current:
+			if ( prev_type != type ) {
+				log_f( logLevel, "PL-stack-ERROR: type-mismatch detected: %d vs %d\n", prev_type, type );
+				error = 1;
+			}
+			// previous size must be the current size + 4 bytes:
+			if ( prev_size != size + 4 ) {
+				log_f( logLevel, "PL-stack-ERROR: size-mismatch detected: %d vs %d\n", prev_size, size );
+				error = 1;
+			}
+		}
+
+		prev_type = type;
+		prev_size = size;
+	}
+
+	if ( size > 4 ) {
+		log_f( logLevel, "PL-stack-ERROR: the last stackitem is truncated: size=%d\n", size );
+		error = 1;
+	}
+
+	if ( printCrashDump != 0 ) Crash( "PL-stack-ERROR: errors detected" );
+
+#ifdef CRASH_ON_ERRORS
+	if ( error != 0 ) {
+		// call the same method again, setting the crash-flag, to get forced output.
+		PrintPLStackDump( pMethodState, upToOffsetB, lineNumber, 1 ); // this will call Crash().
+	}
+#endif // CRASH_ON_ERRORS
+
+	log_f( logLevel, "\n" );
+}
+
+#define PUSH_EVALSTACKITEM_TYPE( size, shift, type ) \
+	PushEvalStackItemType( (size), (shift), (type), pCurrentMethodState, (int)(CURRENT_STACK_OFFSET()) )
+
+static void PushEvalStackItemType( int dataSize, int shift, int type, tMethodState* pMethodState, int offsetB ) {
+
+log_f( 3, "PushEvalStackItemType() :: dataSize=%d shift=%d type=%d offsetB=%d :: ", dataSize, shift, type, offsetB );
+
+	if ( dataSize % 4 != 0 ) Crash( "PushEvalStackItemType() :: bad dataSize %d", dataSize );
+	if ( type < 1 || type > 3 ) Crash( "PushEvalStackItemType() :: bad type %d", type );
+
+	U8* pCurrentTypeInfo = pMethodState->pEvalStackTypeInfo;
+	pCurrentTypeInfo += ( ( offsetB + shift ) >> 2 );
 
 	int size = ( dataSize >> 2 );
 
 	for ( int i = 0; i < size; i++ ) {
 		int ofs = size - i - 1;
-		if ( ofs > 63 ) ofs = 63;
+		if ( ofs > 63 ) Crash( "PushEvalStackItemType() :: ofs_overflow" );
 
 		int typeInfo = ( type << 6 ) + ofs;
 
@@ -189,237 +313,264 @@ log_f( 3, "\n" );
 
 }
 
-#define PUSH_STACKITEM_TYPE( size, shift, type ) \
-	pushStackItemType_func( (size), (shift), (type), pCurrentMethodState, (long)CURRENT_STACK_OFFSET() )
+static void PushPLStackItemType( int dataSize, int shift, int type, tMethodState* pMethodState, int offsetB ) {
 
-static void checkStackItemType_func( int opSize, int shift, tMethodState* pCurrMethodState, long ofs32 ) {
+log_f( 3, "PushPLStackItemType() :: dataSize=%d shift=%d type=%d offsetB=%d :: ", dataSize, shift, type, offsetB );
 
-	long ofs32_current = ofs32;
+	if ( dataSize % 4 != 0 ) Crash( "PushPLStackItemType() :: bad dataSize %d", dataSize );
+	if ( type < 1 || type > 3 ) Crash( "PushPLStackItemType() :: bad type %d", type );
+
+	U8* pCurrentTypeInfo = pMethodState->pParamsLocalsTypeInfo;
+	pCurrentTypeInfo += ( ( offsetB + shift ) >> 2 );
+
+	int size = ( dataSize >> 2 );
+
+	for ( int i = 0; i < size; i++ ) {
+		int ofs = size - i - 1;
+		if ( ofs > 63 ) Crash( "PushPLStackItemType() :: ofs_overflow" );
+
+		int typeInfo = ( type << 6 ) + ofs;
+
+log_f( 3, "%d ", ofs );
+
+		*pCurrentTypeInfo = (U8) typeInfo;
+		pCurrentTypeInfo++;
+	}
+
+log_f( 3, "\n" );
+
+}
+
+int line_number = 0;
+#define STORE_LINE_NUMBER() \
+	line_number = __LINE__
+
+#define CHECK_EVALSTACKITEM_TYPE( size, shift ) \
+	STORE_LINE_NUMBER(); \
+	CheckEvalStackItemType( size, shift, pCurrentMethodState, (int)(CURRENT_STACK_OFFSET()) )
+
+static void CheckEvalStackItemType( int opSize, int shift, tMethodState* pMethodState, int offsetB ) {
 
 	// the parameter "shift" is to specify the relative stack position (bytes) to start check from.
 	// the parameter "count" is to specify how many repeated checks are done.
 
-	log_f( 3, "  =>  CALLED checkStackItemType_func( %d, %d )\n", opSize, shift );
+log_f( 3, "CheckEvalStackItemType() :: opSize=%d shift=%d offsetB=%d :: ", opSize, shift, offsetB );
 
-	ofs32 += shift;
+	int offsetB_original = offsetB;
 
-	// from the current position (as indicated by ofs32),
+	offsetB += shift;
+
+	// from the current position (as indicated by offsetB),
 	// go backwards in stack (as indicated by opSize),
 	// and see if there is a value of correct type.
 
-	ofs32 -= opSize;
+	offsetB -= opSize;
 
-	if ( ofs32 < 0 ) Crash( "reversed outside stack! %d", ofs32 );
+	if ( offsetB < 0 ) Crash( "CheckEvalStackItemType() :: reversed outside stack! %d", offsetB );
 
-//	long ofs8 = (ofs32 >> 2);
-//	PTR ptrInfo = pCurrMethodState->pEvalStackTypeInfo;
-
-	U8* pCurrentTypeInfo = pCurrMethodState->pEvalStackTypeInfo;
-	pCurrentTypeInfo += ( ofs32 >> 2 );
+	U8* pCurrentTypeInfo = pMethodState->pEvalStackTypeInfo;
+	pCurrentTypeInfo += ( offsetB >> 2 );
 
 	U8 typeInfo = *pCurrentTypeInfo;
 
-	int type = parseStackTypeInfo_type( typeInfo );
-	int size = parseStackTypeInfo_size( typeInfo );
+	int type = JIT_ParseStackTypeInfo_type( typeInfo );
+	int size = JIT_ParseStackTypeInfo_size( typeInfo );
 
-	log_f( 3, "checkStackItemType_func() stage-1 : typeInfo=%d type=%d size=%d at ofs32=%d\n", typeInfo, type, size, ofs32 );
+	log_f( 3, "CheckEvalStackItemType() stage-1 : typeInfo=%d type=%d size=%d at offsetB=%d\n", typeInfo, type, size, offsetB );
 
 	if ( opSize != size ) {
-		printStackDump_func( pCurrMethodState, ofs32_current );
-		Crash( "checkStackItemType_func() FAILED at stage-1 : %d vs %d\n", opSize, size );
+		log_f( 0, "CheckEvalStackItemType() FAILED at stage-1 : %d vs %d\n", opSize, size );
+		JIT_PrintEvalStackDump( pMethodState, offsetB_original, line_number, 1 ); // will call Crash().
 	}
 
 	// check stage-2 is only applied if opSize == 4.
 	// => not allowed to split a bigger-than-32-bit value in stack using a 32-bit POP operation.
-	if ( opSize == 4 && ofs32 > 0 ) {
+	if ( opSize == 4 && offsetB > 0 ) {
 
-		ofs32 -= 4;
+		offsetB -= 4;
 
-		pCurrentTypeInfo = pCurrMethodState->pEvalStackTypeInfo;
-		pCurrentTypeInfo += ( ofs32 >> 2 );
+		pCurrentTypeInfo = pMethodState->pEvalStackTypeInfo;
+		pCurrentTypeInfo += ( offsetB >> 2 );
 
 		typeInfo = *pCurrentTypeInfo;
 
-		type = parseStackTypeInfo_type( typeInfo );
-		size = parseStackTypeInfo_size( typeInfo );
+		type = JIT_ParseStackTypeInfo_type( typeInfo );
+		size = JIT_ParseStackTypeInfo_size( typeInfo );
 
-		log_f( 3, "checkStackItemType_func() stage-2 : typeInfo=%d type=%d size=%d at ofs32=%d\n", typeInfo, type, size, ofs32 );
+		log_f( 3, "CheckEvalStackItemType() stage-2 : typeInfo=%d type=%d size=%d at offsetB=%d\n", typeInfo, type, size, offsetB );
 
 		if ( opSize != size ) {
-			printStackDump_func( pCurrMethodState, ofs32_current );
-			Crash( "checkStackItemType_func() FAILED at stage-2 : %d vs %d\n", opSize, size );
+			log_f( 0, "CheckEvalStackItemType() FAILED at stage-2 : %d vs %d\n", opSize, size );
+			JIT_PrintEvalStackDump( pMethodState, offsetB_original, line_number, 1 ); // will call Crash().
 		}
 	}
 }
- 
-#define CHECK_STACKITEM_TYPE( size, shift ) \
-	checkStackItemType_func( size, shift, pCurrentMethodState, (long)CURRENT_STACK_OFFSET() )
 
-static int readStackItemType_func( int shift, tMethodState* pCurrMethodState, long ofs32 ) {
+#define READ_EVALSTACKITEM_TYPE( shift ) \
+	ReadEvalStackItemType( shift, pCurrentMethodState, (int)(CURRENT_STACK_OFFSET()) )
 
-	ofs32 += shift;
+static int ReadEvalStackItemType( int shift, tMethodState* pMethodState, int offsetB ) {
 
-	U8* pCurrentTypeInfo = pCurrMethodState->pEvalStackTypeInfo;
-	pCurrentTypeInfo += ( ofs32 >> 2 );
+	offsetB += shift;
+
+	U8* pCurrentTypeInfo = pMethodState->pEvalStackTypeInfo;
+	pCurrentTypeInfo += ( offsetB >> 2 );
 
 	U8 typeInfo = *pCurrentTypeInfo;
 
-	int type = parseStackTypeInfo_type( typeInfo );
+	int type = JIT_ParseStackTypeInfo_type( typeInfo );
 
 	return type;
 }
 
-#define READ_STACKITEM_TYPE( shift ) \
-	readStackItemType_func( shift, pCurrentMethodState, (long)CURRENT_STACK_OFFSET() )
-
 #else // ENABLE_STACKITEMS_TYPEINFO
 
-#define PRINT_STACKDUMP()
-#define PUSH_STACKITEM_TYPE( size, shift, type )
-#define CHECK_STACKITEM_TYPE( size, shift )
+#define PRINT_EVALSTACK_DUMP()
+#define PUSH_EVALSTACKITEM_TYPE( size, shift, type )
+#define CHECK_EVALSTACKITEM_TYPE( size, shift )
 
 #endif // ENABLE_STACKITEMS_TYPEINFO
 
 // Push a U32 value on the top of the stack
 #define PUSH_U32(value) \
 	*(U32*)pCurEvalStack = (U32)(value); \
-	PUSH_STACKITEM_TYPE( 4, 0, STACKITEM_TYPE_VALUE ); \
+	PUSH_EVALSTACKITEM_TYPE( 4, 0, STACKITEM_TYPE_VALUE ); \
 	pCurEvalStack += 4; \
-	PRINT_STACKDUMP()
+	PRINT_EVALSTACK_DUMP()
 
 // Push a U64 value on the top of the stack
 #define PUSH_U64(value) \
 	*(U64*)pCurEvalStack = (U64)(value); \
-	PUSH_STACKITEM_TYPE( 8, 0, STACKITEM_TYPE_VALUE ); \
+	PUSH_EVALSTACKITEM_TYPE( 8, 0, STACKITEM_TYPE_VALUE ); \
 	pCurEvalStack += 8; \
-	PRINT_STACKDUMP()
+	PRINT_EVALSTACK_DUMP()
 
 // Push a float value on the top of the stack
 #define PUSH_FLOAT(value) \
 	*(float*)pCurEvalStack = (float)(value); \
-	PUSH_STACKITEM_TYPE( 4, 0, STACKITEM_TYPE_VALUE ); \
+	PUSH_EVALSTACKITEM_TYPE( 4, 0, STACKITEM_TYPE_VALUE ); \
 	pCurEvalStack += 4; \
-	PRINT_STACKDUMP()
+	PRINT_EVALSTACK_DUMP()
 
 // Push a double value on the top of the stack
 #define PUSH_DOUBLE(value) \
 	*(double*)pCurEvalStack = (double)(value); \
-	PUSH_STACKITEM_TYPE( 8, 0, STACKITEM_TYPE_VALUE ); \
+	PUSH_EVALSTACKITEM_TYPE( 8, 0, STACKITEM_TYPE_VALUE ); \
 	pCurEvalStack += 8; \
-	PRINT_STACKDUMP()
+	PRINT_EVALSTACK_DUMP()
 
 // Push a 4-byte heap pointer on to the top of the stack
 #define PUSH_O(pHeap) \
 	*(void**)pCurEvalStack = (void*)(pHeap); \
-	PUSH_STACKITEM_TYPE( sizeof(void*), 0, STACKITEM_TYPE_POINTER ); \
+	PUSH_EVALSTACKITEM_TYPE( sizeof(void*), 0, STACKITEM_TYPE_POINTER ); \
 	pCurEvalStack += sizeof(void*); \
-	PRINT_STACKDUMP()
+	PRINT_EVALSTACK_DUMP()
 
 // Push a PTR value on the top of the stack
 #define PUSH_PTR(ptr) \
 	*(PTR*)pCurEvalStack = (PTR)(ptr); \
-	PUSH_STACKITEM_TYPE( sizeof(void*), 0, STACKITEM_TYPE_POINTER ); \
+	PUSH_EVALSTACKITEM_TYPE( sizeof(void*), 0, STACKITEM_TYPE_POINTER ); \
 	pCurEvalStack += sizeof(void*); \
-	PRINT_STACKDUMP()
+	PRINT_EVALSTACK_DUMP()
 
 // Push an arbitrarily-sized value-type onto the top of the stack
 #define PUSH_VALUETYPE(ptr, valueSize, stackInc) \
 	memcpy(pCurEvalStack, ptr, valueSize); \
-	PUSH_STACKITEM_TYPE( stackInc, 0, STACKITEM_TYPE_VALUETYPE ); \
+	PUSH_EVALSTACKITEM_TYPE( stackInc, 0, STACKITEM_TYPE_VALUETYPE ); \
 	pCurEvalStack += stackInc; \
-	PRINT_STACKDUMP()
+	PRINT_EVALSTACK_DUMP()
 
 // DUP4() duplicates the top 4 bytes on the eval stack
 #define DUP4() \
-	CHECK_STACKITEM_TYPE( 4, 0 ); \
-	PUSH_STACKITEM_TYPE( 4, 0, READ_STACKITEM_TYPE( -4 ) ); \
+	CHECK_EVALSTACKITEM_TYPE( 4, 0 ); \
+	PUSH_EVALSTACKITEM_TYPE( 4, 0, READ_EVALSTACKITEM_TYPE( -4 ) ); \
 	*(U32*)pCurEvalStack = *(U32*)(pCurEvalStack - 4); \
 	pCurEvalStack += 4
 
 // DUP8() duplicates the top 8 bytes on the eval stack
 #define DUP8() \
-	CHECK_STACKITEM_TYPE( 8, 0 ); \
-	PUSH_STACKITEM_TYPE( 8, 0, READ_STACKITEM_TYPE( -8 ) ); \
+	CHECK_EVALSTACKITEM_TYPE( 8, 0 ); \
+	PUSH_EVALSTACKITEM_TYPE( 8, 0, READ_EVALSTACKITEM_TYPE( -8 ) ); \
 	*(U64*)pCurEvalStack = *(U64*)(pCurEvalStack - 8); \
 	pCurEvalStack += 8
 
 // DUP() duplicates numBytes bytes from the top of the stack
 #define DUP(numBytes) \
-	CHECK_STACKITEM_TYPE( numBytes, 0 ); \
-	PUSH_STACKITEM_TYPE( numBytes, 0, READ_STACKITEM_TYPE( -numBytes ) ); \
+	CHECK_EVALSTACKITEM_TYPE( numBytes, 0 ); \
+	PUSH_EVALSTACKITEM_TYPE( numBytes, 0, READ_EVALSTACKITEM_TYPE( -numBytes ) ); \
 	memcpy(pCurEvalStack, pCurEvalStack - numBytes, numBytes); \
 	pCurEvalStack += numBytes
 
 // Pop a U32 value from the stack
 #define POP_U32() \
 	(*(U32*)(pCurEvalStack -= 4)); \
-	CHECK_STACKITEM_TYPE( 4, 4 )
+	CHECK_EVALSTACKITEM_TYPE( 4, 4 )
 
 // Pop a U64 value from the stack
 #define POP_U64() \
 	(*(U64*)(pCurEvalStack -= 8)); \
-	CHECK_STACKITEM_TYPE( 8, 8 )
+	CHECK_EVALSTACKITEM_TYPE( 8, 8 )
 
 // Pop a float value from the stack
 #define POP_FLOAT() \
 	(*(float*)(pCurEvalStack -= 4)); \
-	CHECK_STACKITEM_TYPE( 4, 4 )
+	CHECK_EVALSTACKITEM_TYPE( 4, 4 )
 
 // Pop a double value from the stack
 #define POP_DOUBLE() \
 	(*(double*)(pCurEvalStack -= 8)); \
-	CHECK_STACKITEM_TYPE( 8, 8 )
+	CHECK_EVALSTACKITEM_TYPE( 8, 8 )
 
 // Pop a PTR value from the stack
 #define POP_PTR() \
 	(*(PTR*)(pCurEvalStack -= sizeof(void*))); \
-	CHECK_STACKITEM_TYPE( sizeof(void*), sizeof(void*) )
+	CHECK_EVALSTACKITEM_TYPE( sizeof(void*), sizeof(void*) )
 
 // Pop a Object (heap) pointer value from the stack
 #define POP_O() \
 	(*(HEAP_PTR*)(pCurEvalStack -= sizeof(void*))); \
-	CHECK_STACKITEM_TYPE( sizeof(void*), sizeof(void*) )
+	CHECK_EVALSTACKITEM_TYPE( sizeof(void*), sizeof(void*) )
 
 // Pop an arbitrarily-sized value-type from the stack (copies it to the specified memory location)
 #define POP_VALUETYPE(ptr, valueSize, stackDec) \
 	memcpy(ptr, pCurEvalStack -= stackDec, valueSize); \
-	CHECK_STACKITEM_TYPE( stackDec, stackDec )
+	CHECK_EVALSTACKITEM_TYPE( stackDec, stackDec )
 
 // Pop 2 U32's from the stack
 #define POP_U32_U32(v1,v2) \
-	CHECK_STACKITEM_TYPE( 4, 0 ); \
-	CHECK_STACKITEM_TYPE( 4, -4 ); \
+	CHECK_EVALSTACKITEM_TYPE( 4, 0 ); \
+	CHECK_EVALSTACKITEM_TYPE( 4, -4 ); \
 	pCurEvalStack -= 8; \
 	v1 = *(U32*)pCurEvalStack; \
 	v2 = *(U32*)(pCurEvalStack + 4)
 
 // Pop 2 U64's from the stack
 #define POP_U64_U64(v1,v2) \
-	CHECK_STACKITEM_TYPE( 8, 0 ); \
-	CHECK_STACKITEM_TYPE( 8, -8 ); \
+	CHECK_EVALSTACKITEM_TYPE( 8, 0 ); \
+	CHECK_EVALSTACKITEM_TYPE( 8, -8 ); \
 	pCurEvalStack -= 16; \
 	v1 = *(U64*)pCurEvalStack; \
 	v2 = *(U64*)(pCurEvalStack + 8)
 
 // Pop 2 F32's from the stack
 #define POP_F32_F32(v1,v2) \
-	CHECK_STACKITEM_TYPE( 4, 0 ); \
-	CHECK_STACKITEM_TYPE( 4, -4 ); \
+	CHECK_EVALSTACKITEM_TYPE( 4, 0 ); \
+	CHECK_EVALSTACKITEM_TYPE( 4, -4 ); \
 	pCurEvalStack -= 8; \
 	v1 = *(float*)pCurEvalStack; \
 	v2 = *(float*)(pCurEvalStack + 4)
 
 // Pop 2 F64's from the stack
 #define POP_F64_F64(v1,v2) \
-	CHECK_STACKITEM_TYPE( 8, 0 ); \
-	CHECK_STACKITEM_TYPE( 8, -8 ); \
+	CHECK_EVALSTACKITEM_TYPE( 8, 0 ); \
+	CHECK_EVALSTACKITEM_TYPE( 8, -8 ); \
 	pCurEvalStack -= 16; \
 	v1 = *(double*)pCurEvalStack; \
 	v2 = *(double*)(pCurEvalStack + 8)
 
 // POP() returns nothing - it just alters the stack offset correctly
 #define POP(numBytes) \
-	CHECK_STACKITEM_TYPE( numBytes, 0 ); \
+	CHECK_EVALSTACKITEM_TYPE( numBytes, 0 ); \
 	pCurEvalStack -= numBytes
 
 // POP_ALL() empties the evaluation stack
@@ -432,14 +583,14 @@ static int readStackItemType_func( int shift, tMethodState* pCurrMethodState, lo
 
 // General binary ops
 #define BINARY_OP(returnType, type1, type2, op) \
-	CHECK_STACKITEM_TYPE( sizeof(type2), 0 ); \
-	CHECK_STACKITEM_TYPE( sizeof(type1), -sizeof(type2) ); \
+	CHECK_EVALSTACKITEM_TYPE( sizeof(type2), 0 ); \
+	CHECK_EVALSTACKITEM_TYPE( sizeof(type1), -sizeof(type2) ); \
 	pCurEvalStack -= sizeof(type1) + sizeof(type2) - sizeof(returnType); \
 	*(returnType*)(pCurEvalStack - sizeof(returnType)) = \
 	*(type1*)(pCurEvalStack - sizeof(returnType)) op \
 	*(type2*)(pCurEvalStack - sizeof(returnType) + sizeof(type1)); \
-	PUSH_STACKITEM_TYPE( sizeof(returnType), -sizeof(returnType), STACKITEM_TYPE_VALUE ); \
-	PRINT_STACKDUMP();
+	PUSH_EVALSTACKITEM_TYPE( sizeof(returnType), -sizeof(returnType), STACKITEM_TYPE_VALUE ); \
+	PRINT_EVALSTACK_DUMP();
 
 // General unary ops
 #define UNARY_OP(type, op) STACK_ADDR(type) = op STACK_ADDR(type)
@@ -480,32 +631,48 @@ static void CheckIfCurrentInstructionHasBreakpoint(tMethodState* pMethodState, U
 }
 
 // Note: newObj is only set if a constructor is being called
-static void CreateParameters(PTR pParamsLocals, tMD_MethodDef *pCallMethod, PTR *ppCurEvalStack, HEAP_PTR newObj) {
+static void CreateParameters(tMethodState *pCallMethodState, tMD_MethodDef *pCallMethodDef, tMethodState *pCurrMethodState, PTR *ppCurEvalStack, HEAP_PTR newObj) {
 	U32 ofs;
+	PTR pParamsLocals = pCallMethodState->pParamsLocals;
+	PTR pParamsLocalsTypeInfo = pCallMethodState->pParamsLocalsTypeInfo;
+	PTR pEvalStackTypeInfo = pCurrMethodState->pEvalStackTypeInfo;
+
+//int current_stack_offset_INITIAL = (int) ((PTR)*ppCurEvalStack - (PTR)pCurrMethodState->pEvalStack);
+//JIT_PrintEvalStackDump( pCurrMethodState, current_stack_offset_INITIAL, __LINE__, 1234 );
 
 	if (newObj != NULL) {
 		// If this is being called from JIT_NEW_OBJECT then need to specially push the new object
 		// onto parameter stack position 0
 		*(HEAP_PTR*)pParamsLocals = newObj;
 		ofs = sizeof(HEAP_PTR);
+
+PushPLStackItemType( sizeof(newObj), 0, STACKITEM_TYPE_POINTER, pCallMethodState, 0 );
+
 	} else {
 		ofs = 0;
 	}
 
-int change = -(pCallMethod->parameterStackSize - ofs);
+int change = -(pCallMethodDef->parameterStackSize - ofs);
 log_f( 3, "EXTRA_STACKPOINTER_CHANGE at line %d : change = %d    CreateParameters()\n", __LINE__, change );
 
-	*ppCurEvalStack -= pCallMethod->parameterStackSize - ofs;
-	memcpy(pParamsLocals + ofs, *ppCurEvalStack, pCallMethod->parameterStackSize - ofs);
+	*ppCurEvalStack -= pCallMethodDef->parameterStackSize - ofs;
+	memcpy(pParamsLocals + ofs, *ppCurEvalStack, pCallMethodDef->parameterStackSize - ofs);
 
-	if( getLogLevel() < 3 ) return;
+	int current_stack_offset_BYTES = (int) ((PTR)*ppCurEvalStack - (PTR)pCurrMethodState->pEvalStack);
 
+	int type_ofs = ofs >> 2; // 32bit to 8bit
+	int from_offset = current_stack_offset_BYTES >> 2;
+	int type_bytes = (pCallMethodDef->parameterStackSize - ofs) >> 2;
+	memcpy(pParamsLocalsTypeInfo + type_ofs, pEvalStackTypeInfo + from_offset, type_bytes);
+
+//PrintPLStackDump( pCallMethodState, pCallMethodDef->parameterStackSize, __LINE__, 0 );
+
+/*	if( getLogLevel() < 3 ) return;
 	// now dump the call parameters, with types and values if possible.
+	log_f( 3, "DUMP_CALL_PARAMS for : %s.%s()\n", pCallMethodDef->pParentType->nameSpace, pCallMethodDef->name ); 
+	for ( int p = 0; p < pCallMethodDef->numberOfParameters; p++ ) {
 
-	log_f( 3, "DUMP_CALL_PARAMS for : %s.%s()\n", pCallMethod->pParentType->nameSpace, pCallMethod->name ); 
-	for ( int p = 0; p < pCallMethod->numberOfParameters; p++ ) {
-
-		tParameter *pParam = &(pCallMethod->pParams[p]);
+		tParameter *pParam = &(pCallMethodDef->pParams[p]);
 
 		tMD_TypeDef *pTypeDef = pParam->pTypeDef;
 		U32 offset = pParam->offset;
@@ -523,7 +690,7 @@ log_f( 3, "EXTRA_STACKPOINTER_CHANGE at line %d : change = %d    CreateParameter
 		} else {
 			log_f( 3, "DUMP_CALL_PARAMS    %d => %s.%s\n", p, pTypeDef->nameSpace, pTypeDef->name ); 
 		}
-	}
+	}	*/
 }
 
 static tMethodState* RunFinalizer(tThread *pThread) {
@@ -1456,9 +1623,39 @@ JIT_RETURN_start:
 		}
 		return THREAD_STATUS_EXIT;
 	}
+
+#ifdef ENABLE_STACKITEMS_TYPEINFO
+	int stackItemType = STACKITEM_TYPE_POINTER; // default value for internal-call.
+#endif // ENABLE_STACKITEMS_TYPEINFO
+
 	// Make u32Value the number of bytes of the return value from the function
 	if (pCurrentMethodState->pMethod->pReturnType != NULL) {
 		u32Value = pCurrentMethodState->pMethod->pReturnType->stackSize;
+
+#ifdef ENABLE_STACKITEMS_TYPEINFO
+
+		// use the method return type to determine stackItemType.
+
+	//	if ( pCurrentMethodState->pMethod->pReturnType->isValueType ) { // simple
+	//		int stackItemType = STACKITEM_TYPE_VALUETYPE;
+	//	}
+
+		switch ( pCurrentMethodState->pMethod->pReturnType->stackType ) { // more precise
+			case EVALSTACK_O:
+			case EVALSTACK_PTR:
+			stackItemType = STACKITEM_TYPE_POINTER;
+			break;
+
+			case EVALSTACK_VALUETYPE:
+			stackItemType = STACKITEM_TYPE_VALUETYPE;
+			break;
+
+			default:
+			stackItemType = STACKITEM_TYPE_VALUE;
+		}
+
+#endif // ENABLE_STACKITEMS_TYPEINFO
+
 	} else if (pCurrentMethodState->isInternalNewObjCall) {
 		u32Value = sizeof(void*);
 	} else {
@@ -1475,7 +1672,7 @@ JIT_RETURN_start:
 			pCurEvalStack += u32Value;
 
 #ifdef ENABLE_STACKITEMS_TYPEINFO
-PUSH_STACKITEM_TYPE( u32Value, -u32Value, getTypeFromTypeDef( pCurrentMethodState->pMethod->pReturnType ) );
+PUSH_EVALSTACKITEM_TYPE( u32Value, -u32Value, stackItemType );
 #endif // ENABLE_STACKITEMS_TYPEINFO
 
 		}
@@ -1706,7 +1903,7 @@ callMethodSet:
 		pCallMethodState = MethodState_Direct(pThread, pCallMethod, pCurrentMethodState, 0);
 		// Set up the parameter stack for the method being called
 		pTempPtr = pCurEvalStack;
-		CreateParameters(pCallMethodState->pParamsLocals, pCallMethod, &pTempPtr, NULL);
+		CreateParameters(pCallMethodState, pCallMethod, pCurrentMethodState, &pTempPtr, NULL);
 		pCurEvalStack = pTempPtr;
 		// Set up the local variables for the new method state
 		CHANGE_METHOD_STATE(pCallMethodState);
@@ -2900,7 +3097,7 @@ JIT_NEWOBJECT_start:
 		pCallMethodState = MethodState_Direct(pThread, pConstructorDef, pCurrentMethodState, isInternalConstructor);
 		// Fill in the parameters
 		pTempPtr = pCurEvalStack;
-		CreateParameters(pCallMethodState->pParamsLocals, pConstructorDef, &pTempPtr, obj);
+		CreateParameters(pCallMethodState, pConstructorDef, pCurrentMethodState, &pTempPtr, obj);
 		pCurEvalStack = pTempPtr;
 		if (!isInternalConstructor) {
 			// Push the object here, so it's on the stack when the constructor returns
@@ -2932,7 +3129,7 @@ JIT_NEWOBJECT_VALUETYPE_start:
 		pCallMethodState = MethodState_Direct(pThread, pConstructorDef, pCurrentMethodState, isInternalConstructor);
 		// Fill in the parameters
 		pTempPtr = pCurEvalStack;
-		CreateParameters(pCallMethodState->pParamsLocals, pConstructorDef, &pTempPtr, pMem);
+		CreateParameters(pCallMethodState, pConstructorDef, pCurrentMethodState, &pTempPtr, pMem);
 		pCurEvalStack = pTempPtr;
 		// Set the stack state so it's correct for the constructor return
 		pCurEvalStack += pConstructorDef->pParentType->stackSize;

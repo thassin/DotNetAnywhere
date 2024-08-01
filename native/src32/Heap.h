@@ -32,8 +32,10 @@ extern U64 gcTotalTime;
 #endif
 
 struct tHeapRootEntry_ {
-	U32 numPointers; // The number of pointers within this memory area
+	U32 numBytes; // The number of data-bytes within this memory area
 	void **pMem;
+	void *pMemTypeInfo; // pointer to eval/PL stack typeinfo or null
+	int sourceId;
 };
 
 struct tHeapRoots_ {
@@ -43,7 +45,7 @@ struct tHeapRoots_ {
 };
 
 void Heap_Init();
-void Heap_SetRoots(tHeapRoots *pHeapRoots, void *pRoots, U32 sizeInBytes);
+void Heap_SetRoots(tHeapRoots *pHeapRoots, void *pRoots, void *pRootsTypeInfo, U32 sizeInBytes, U32 sourceId);
 void Heap_UnmarkFinalizer(HEAP_PTR heapPtr);
 void Heap_GarbageCollect();
 U32 Heap_NumCollections();

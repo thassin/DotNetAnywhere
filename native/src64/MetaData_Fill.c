@@ -211,7 +211,7 @@ static tMD_MethodDef* FindVirtualOverriddenMethod(tMD_TypeDef *pTypeDef, tMD_Met
 
 void MetaData_Fill_TypeDef_(tMD_TypeDef *pTypeDef, tMD_TypeDef **ppClassTypeArgs, tMD_TypeDef **ppMethodTypeArgs) {
 	IDX_TABLE firstIdx, lastIdx, token;
-	U32 instanceMemSize, staticMemSize, virtualOfs, i, j;
+	U32 instanceMemSize, staticMemSize, virtualOfs, i, j, fieldIndex;
 	tMetaData *pMetaData;
 	tMD_TypeDef *pParent;
 
@@ -366,20 +366,56 @@ void MetaData_Fill_TypeDef_(tMD_TypeDef *pTypeDef, tMD_TypeDef **ppClassTypeArgs
 				pTypeDef->ppFields[i] = pFieldDef;
 			}
 		}
+
 		if (staticMemSize > 0) {
 			pTypeDef->pStaticFields = mallocForever(staticMemSize);
 			memset(pTypeDef->pStaticFields, 0, staticMemSize);
+
 			// Set the field addresses (->pMemory) of all static fields
+
+			// 20240723 TommiHassinen
+			// => force here C# static fields order of introduction so that ref-types are defined first and val-types later.
+			// => also calculate and store the count of static reference-type fields for later use.
+			// => the value is needed for garbage-collection.
+
+			int refTypeCount = 0;
+			int valTypeCount = 0;
+
 			for (i = 0; i<pTypeDef->numFields; i++) {
 				tMD_FieldDef *pFieldDef;
 
 				pFieldDef = pTypeDef->ppFields[i];
-				if (FIELD_ISSTATIC(pFieldDef) && pFieldDef->pMemory == NULL) {
-					// Only set it if it isn't already set. It will be already set if this field has an RVA
-					pFieldDef->pMemory = pTypeDef->pStaticFields + pFieldDef->memOffset;
+
+				// 20240723 it seems that field type is now always set.
+				if ( pFieldDef->pType == NULL ) Crash( "field type not set" );
+
+				if (FIELD_ISSTATIC(pFieldDef)) {
+
+					int isValueType = 0;
+					if ( pFieldDef->pType->isValueType ) isValueType += 1;
+
+					if ( isValueType == 0 ) {
+						// is reference-type
+						refTypeCount++;
+						// make sure that reference-types are FIRST.
+						if ( valTypeCount != 0 ) {
+							// if this happens, please fix the static fields order in your C# code and re-compile.
+							Crash( "ERROR in static fields: define refTypes before valTypes. %s.%s", pTypeDef->nameSpace, pTypeDef->name );
+						}
+					} else {
+						// is value-type
+						valTypeCount++;
+					}
+
+					if (pFieldDef->pMemory == NULL) {
+						// Only set it if it isn't already set. It will be already set if this field has an RVA
+						pFieldDef->pMemory = pTypeDef->pStaticFields + pFieldDef->memOffset;
+					}
 				}
 			}
+
 			pTypeDef->staticFieldSize = staticMemSize;
+			pTypeDef->staticFieldSize_refTypeFields = refTypeCount << 3; // 64-bit values
 		}
 
 		// Resolve all members
@@ -516,6 +552,7 @@ void MetaData_Fill_TypeDef_(tMD_TypeDef *pTypeDef, tMD_TypeDef **ppClassTypeArgs
 	}
 
 //	log_f(2, "Type:  %s.%s\n", pTypeDef->nameSpace, pTypeDef->name);
-	log_f(2, "Type:  %s.%s stackSize=%d isValueType=%d instanceMemSize=%d\n", pTypeDef->nameSpace, pTypeDef->name, pTypeDef->stackSize, pTypeDef->isValueType, pTypeDef->instanceMemSize);
+//	log_f(2, "FILL_TD Type:  %s.%s stackSize=%d isValueType=%d instanceMemSize=%d\n", pTypeDef->nameSpace, pTypeDef->name, pTypeDef->stackSize, pTypeDef->isValueType, pTypeDef->instanceMemSize);
+	log_f(2, "FILL_TD Type:  %s.%s stackSize=%d isValueType=%d instanceMemSize=%d stat=%d\n", pTypeDef->nameSpace, pTypeDef->name, pTypeDef->stackSize, pTypeDef->isValueType, pTypeDef->instanceMemSize, pTypeDef->staticFieldSize);
 }
 

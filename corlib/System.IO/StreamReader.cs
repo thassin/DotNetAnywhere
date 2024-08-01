@@ -7,6 +7,9 @@ using System.Runtime.InteropServices;
 namespace System.IO {
 	public class StreamReader : TextReader {
 
+		// 20240723 define static reference-type fields first.
+		public new static readonly StreamReader Null = (StreamReader)(new NullStreamReader());
+
 		const int DefaultBufferSize = 1024;
 		const int DefaultFileBufferSize = 4096;
 		const int MinimumBufferSize = 128;
@@ -74,8 +77,6 @@ namespace System.IO {
 				get { return Encoding.Unicode; }
 			}
 		}
-
-		public new static readonly StreamReader Null = (StreamReader)(new NullStreamReader());
 
 		internal StreamReader() { }
 

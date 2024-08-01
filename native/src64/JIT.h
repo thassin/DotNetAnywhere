@@ -42,6 +42,7 @@ typedef int(*fnPInvoke)(STRING libName, STRING funcName, STRING arg0);
 
 #include "Types.h"
 
+// TommiHassinen 2023:
 // jitops typeinfo is an U8 flag value.
 // each 32-bit Ops value has it's own 8-bit type value.
 
@@ -53,6 +54,7 @@ typedef int(*fnPInvoke)(STRING libName, STRING funcName, STRING arg0);
 #define JITOPS_TYPE_BRANCH		( 1 << 5 )	// 32
 #define JITOPS_TYPE_64_2ND		( 1 << 6 )	// 64
 
+// TommiHassinen 2023:
 // stackitem typeinfo is an U8 value, in which:
 // *) highest 2 bits encode the value type/kind, and
 // *) lowest 6 bits encode a "reversed-offset" of a value.
@@ -65,13 +67,16 @@ typedef int(*fnPInvoke)(STRING libName, STRING funcName, STRING arg0);
 // big, so that a maximum value of offset (63) is exceeded, the
 // maximum value is used as the offset value.
 
-// some examples:
-// stackitem size=4	offset values: 0
-// stackitem size=8	offset values: 1,0
-// stackitem size=40	offset values: 9,8,7,6,5,4,3,2,1,0
-// stackitem size=400	offset values: 63,63,63,...,63,62,61,...3,2,1,0
+// 2024 update: exceeding maximum value (63) is no longer allowed.
+// => value-types cannot have sizes exceeding 256 bytes.
 
-#define STACKITEM_TYPE_VALUE		1	// for int,long,float,double values.
+// some examples:
+// stackitem size = 4 = 1*4	offset values: 0
+// stackitem size = 8 = 2*4	offset values: 1,0
+// stackitem size = 40 = 10*4	offset values: 9,8,7,6,5,4,3,2,1,0
+// stackitem size = 256 = 64*4	offset values: 63,62,61,...,3,2,1,0 (max allowed size)
+
+#define STACKITEM_TYPE_VALUE		1	// for int,long,float,double,bool values.
 #define STACKITEM_TYPE_POINTER		2	// for pointers (O and PTR).
 #define STACKITEM_TYPE_VALUETYPE	3	// for valuetypes.
 
@@ -177,6 +182,11 @@ typedef struct tJITCodeInfo_ {
 
 extern tJITCodeInfo jitCodeInfo[JIT_OPCODE_MAXNUM];
 extern tJITCodeInfo jitCodeGoNext;
+
+int JIT_ParseStackTypeInfo_type( U8 typeInfo );
+int JIT_ParseStackTypeInfo_size( U8 typeInfo );
+
+void JIT_PrintEvalStackDump( tMethodState* pMethodState, int upToOffsetB, int lineNumber, int printCrashDump );
 
 void JIT_Execute_Init();
 

@@ -34,6 +34,11 @@ void* mallocTrace(int s, char *pFile, int line);
 #define Assert(cond)
 #endif
 
+#ifdef _DEBUG
+// 20240726 no such debug-function specified elsewhere.
+#define __debugbreak()
+#endif
+
 #define FAKE_RETURN exit(101)
 
 #define INTERNALCALL_PARAM(ofs, type) *(type*)(pParams + ofs)

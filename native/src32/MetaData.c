@@ -354,7 +354,8 @@ int expectedSize = -1;
 switch ( tableID ) {
 	case 0:		expectedSize = 8; break;
 	case 1:		expectedSize = 16; break;
-	case 2:		expectedSize = 132; break;
+//	case 2:		expectedSize = 132; break; // before 20240723
+	case 2:		expectedSize = 136; break; // 20240723 "staticFieldSize_refTypeFields" added.
 	case 4:		expectedSize = 44; break;
 	case 6:		expectedSize = 68; break;
 	case 8:		expectedSize = 8; break;
@@ -543,14 +544,20 @@ rowItemBytes++;
 			}
 		}
 
-	if ( tableID == 2 ) { // some debug logging...
+	if ( tableID == 2 ) {
 		tMD_TypeDef *ptr = pDest;
-		log_f( 3, "TYPEDEF %s.%s isFilled=%d :: instanceMemSize=%d stackSize=%d arrayElementSize=%d staticFieldSize=%d\n", ptr->nameSpace, ptr->name, ptr->isFilled, ptr->instanceMemSize, ptr->stackSize, ptr->arrayElementSize, ptr->staticFieldSize );
+		ptr->staticFieldSize_refTypeFields = 0; // field "staticFieldSize_refTypeFields" is not read.
+		//log_f( 3, "TYPEDEF %s.%s isFilled=%d :: instanceMemSize=%d stackSize=%d arrayElementSize=%d\n", ptr->nameSpace, ptr->name, ptr->isFilled, ptr->instanceMemSize, ptr->stackSize, ptr->arrayElementSize);
 	}
 
 pDest += rowLen;
 
 int paddingBytes = 0;
+
+if ( tableID == 2 ) {
+	// compensate for 32-bit field staticFieldSize_refTypeFields.
+	paddingBytes += 4; // 32-bit field not read from file.
+}
 
 if ( rowItemBytes + paddingBytes != rowLen ) {
 	Crash("Writing MetaData row on tableID=%d failed: rowItemBytes=%d paddingBytes=%d rowLen=%d\n", tableID, rowItemBytes, paddingBytes, rowLen);
@@ -678,7 +685,6 @@ void MetaData_GetConstant(tMetaData *pThis, IDX_TABLE idx, PTR pResultMem) {
 	default:
 		Crash("MetaData_GetConstant() Cannot handle value type: 0x%02x", pConst->type);
 	}
-
 }
 
 void MetaData_GetHeapRoots(tHeapRoots *pHeapRoots, tMetaData *pMetaData) {
@@ -693,8 +699,8 @@ void MetaData_GetHeapRoots(tHeapRoots *pHeapRoots, tMetaData *pMetaData) {
 		if (pTypeDef->isGenericDefinition) {
 			Generic_GetHeapRoots(pHeapRoots, pTypeDef);
 		} else {
-			if (pTypeDef->staticFieldSize > 0) {
-				Heap_SetRoots(pHeapRoots, pTypeDef->pStaticFields, pTypeDef->staticFieldSize);
+			if (pTypeDef->staticFieldSize_refTypeFields > 0) {
+				Heap_SetRoots(pHeapRoots, pTypeDef->pStaticFields, NULL, pTypeDef->staticFieldSize_refTypeFields, 21);
 			}
 		}
 	}

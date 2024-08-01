@@ -89,6 +89,7 @@ static void RemoveWeakRefTarget(tHeapEntry *pHeapEntry, U32 removeLongRefs);
 
 static tHeapEntry *pHeapTreeRoot;
 static tHeapEntry *nil;
+
 #define MAX_TREE_DEPTH 40
 
 // The total heap memory currently allocated
@@ -278,29 +279,85 @@ static void GarbageCollect() {
 	// Mark phase
 	while (heapRoots.num > 0) {
 		tHeapRootEntry *pRootsEntry;
-		U32 i;
 		U32 moreRootsAdded = 0;
-		U32 rootsEntryNumPointers;
+		U32 rootsEntryTotalBytes;
 		void **pRootsEntryMem;
+		void *pRootsEntryTypeInfo;
 
 		// Get a piece of memory off the list of heap memory roots.
 		pRootsEntry = &heapRoots.pHeapEntries[heapRoots.num - 1];
-		rootsEntryNumPointers = pRootsEntry->numPointers;
+		rootsEntryTotalBytes = pRootsEntry->numBytes;
+
 		pRootsEntryMem = pRootsEntry->pMem;
+		pRootsEntryTypeInfo = pRootsEntry->pMemTypeInfo;
+
 		// Mark this entry as done
-		pRootsEntry->numPointers = 0;
+		pRootsEntry->numBytes = 0;
 		pRootsEntry->pMem = NULL;
+		pRootsEntry->pMemTypeInfo = NULL;
+
 		// Iterate through all pointers in it
-		for (i=0; i<rootsEntryNumPointers; i++) {
-			void *pMemRef = pRootsEntryMem[i];
+
+		int byteCounter = 0;
+		
+		while ( byteCounter < rootsEntryTotalBytes ) {
+		
+			// find the next pointer.
+			// => if pRootsEntryTypeInfo is NULL, then pRootsEntryMem is an array of 64-bit pointers.
+			// => otherwise scan pRootsEntryTypeInfo to find a next pointer-type value.
+		
+			long ptrOffset = -1;
+			
+			if ( pRootsEntryTypeInfo == NULL ) {
+				ptrOffset = byteCounter;
+				byteCounter += 4; // 32bit
+			} else {
+			
+				int type;
+				int sizeB;
+			
+				while ( byteCounter < rootsEntryTotalBytes ) {
+				
+					int type_ofs = byteCounter >> 2;
+					U8 typeInfo = *(U8*)(pRootsEntryTypeInfo + type_ofs);
+					
+					type = JIT_ParseStackTypeInfo_type( typeInfo );
+					sizeB = JIT_ParseStackTypeInfo_size( typeInfo );
+
+					// TODO stackitem-type-based pointer search is not working/enabled so far.
+					// => select here each 32-bit value as a potential heap-pointer value.
+					break; // test each value in 32-bit steps.
+					
+					byteCounter += sizeB;
+				}
+				
+				if ( byteCounter >= rootsEntryTotalBytes ) break; // not found
+
+				ptrOffset = byteCounter; // pointer OK for testing.
+
+				//byteCounter += sizeB; TODO advance counter by type.
+				byteCounter += 4; // test each value in 32-bit steps.
+			}
+			
+			if ( ptrOffset < 0 ) continue; // no pointer found to test.
+
+			U64 tmp1 = (U64) pRootsEntryMem;
+			U64 tmp2 = (U64) ptrOffset;
+
+			void *pMemRef = *(void**)(tmp1 + tmp2);
+
 			// Quick escape for known non-memory 
 			if (pMemRef == NULL) {
 				continue;
 			}
+
 			// Find this piece of heap memory in the tracking tree.
 			// Note that the 2nd memory address comparison MUST be >, not >= as might be expected,
 			// to allow for a zero-sized memory to be detected (and not garbage collected) properly.
 			// E.g. The object class has zero memory.
+
+			int memFound = 0;
+
 			pNode = pHeapTreeRoot;
 			while (pNode != nil) {
 				if (pMemRef < (void*)pNode) {
@@ -308,6 +365,7 @@ static void GarbageCollect() {
 				} else if ((char*)pMemRef > ((char*)pNode) + GetSize(pNode) + sizeof(tHeapEntry)) {
 					pNode = pNode->pLink[1];
 				} else {
+					memFound = 1;
 					// Found memory. See if it's already been marked.
 					// If it's already marked, then don't do anything.
 					// It it's not marked, then add all of its memory to the roots, and mark it.
@@ -329,7 +387,7 @@ static void GarbageCollect() {
 								pType->pArrayElementType->stackType == EVALSTACK_PTR)) {
 
 								if (pType != types[TYPE_SYSTEM_WEAKREFERENCE]) {
-									Heap_SetRoots(&heapRoots,pNode->memory, GetSize(pNode));
+									Heap_SetRoots(&heapRoots, pNode->memory, NULL, GetSize(pNode), 99);
 									moreRootsAdded = 1;
 								}
 							}
@@ -433,17 +491,25 @@ U32 Heap_GetTotalMemory() {
 	return trackHeapSize;
 }
 
-void Heap_SetRoots(tHeapRoots *pHeapRoots, void *pRoots, U32 sizeInBytes) {
+void Heap_SetRoots(tHeapRoots *pHeapRoots, void *pRoots, void *pRootsTypeInfo, U32 sizeInBytes, U32 sourceId) {
 	tHeapRootEntry *pRootEntry;
 
-	Assert((sizeInBytes & 0x3) == 0);
+	// "pRoots" only contains 32-bit values.
+	// IDEALLY those all should be tHeapEntry pointers,
+	// but pointers are checked/validated in "mark-phase" at lines 310-360.
+
+	Assert((sizeInBytes & 0x3) == 0); // 32bit
+
 	if (pHeapRoots->num >= pHeapRoots->capacity) {
 		pHeapRoots->capacity <<= 1;
 		pHeapRoots->pHeapEntries = (tHeapRootEntry*)realloc(pHeapRoots->pHeapEntries, pHeapRoots->capacity * sizeof(tHeapRootEntry));
 	}
+
 	pRootEntry = &pHeapRoots->pHeapEntries[pHeapRoots->num++];
-	pRootEntry->numPointers = sizeInBytes >> 2;
+	pRootEntry->numBytes = sizeInBytes;
 	pRootEntry->pMem = pRoots;
+	pRootEntry->pMemTypeInfo = pRootsTypeInfo;
+	pRootEntry->sourceId = sourceId;
 }
 
 HEAP_PTR Heap_Alloc(tMD_TypeDef *pTypeDef, U32 size) {
