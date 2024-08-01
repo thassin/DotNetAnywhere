@@ -1,9 +1,15 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace PInvokeTestApp {
+namespace Test03 {
 
-    class MainClass {
+    public class Program {
+
+        private const string TESTCASE = "TESTCASE03 : ";
+
+        private const string TEST_PASSED = "test_passed";
+        private const string TEST_FAILED = "test_FAILED";
+
         private const string nativeLibName = "libpinvoketest";
 
         [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
@@ -20,11 +26,6 @@ namespace PInvokeTestApp {
 
         [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
         public static extern double test5(double x);
-
-        private const string TESTCASE = "TESTCASE03 : ";
-
-        private const string TEST_PASSED = "test_passed";
-        private const string TEST_FAILED = "test_FAILED";
 
         public static void Main(string[] args) {
             Console.WriteLine( TESTCASE + "test pinvoke calls." );

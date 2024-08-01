@@ -20,6 +20,7 @@ namespace Test02 {
             }
 
             int sum = 0;
+
 // FIXME there is no conversion like this?!? cast from int to long:
 // 0xD4 	conv.ovf.i 	Convert to a native int (on the stack as native int) and throw an exception on overflow.
             //for ( long x = 0; x < (long) sz; x++ ) {

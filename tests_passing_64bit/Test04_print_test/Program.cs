@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Test02 {
+namespace Test04 {
 
     public class Program {
 
