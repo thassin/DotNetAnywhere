@@ -325,7 +325,7 @@ static void GarbageCollect() {
 					sizeB = JIT_ParseStackTypeInfo_size( typeInfo );
 
 					// TODO stackitem-type-based pointer search is not working/enabled so far.
-					// => select here each 32-bit value as a potential heap-pointer value.
+					// => select here each 32-bit offset as a potential heap-pointer start offset.
 					break; // test each value in 32-bit steps.
 					
 					byteCounter += sizeB;

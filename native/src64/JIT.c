@@ -51,7 +51,8 @@ typedef struct tOps_ tOps;
 struct tOps_ {
 	U32 *pValues;
 #ifdef ENABLE_JITOPS_TYPEINFO
-	U8 *pTypes;
+	U8 *pDEBUGval_opCodeTypes;
+	U32 *pDEBUGval_opCodeValues;
 #endif // ENABLE_JITOPS_TYPEINFO
 	I32 *pSequencePoints;
 	U32 capacity;
@@ -70,8 +71,10 @@ static void InitOps( tOps *pOps, U32 initialCapacity ) {
 	pOps->ofs = 0;
 	pOps->pValues = malloc((initialCapacity) * sizeof(U32));
 #ifdef ENABLE_JITOPS_TYPEINFO
-	pOps->pTypes = malloc((initialCapacity) * sizeof(U8));
-	for ( int i = 0; i < initialCapacity; i++ ) pOps->pTypes[i] = 0;
+	pOps->pDEBUGval_opCodeTypes = malloc((initialCapacity) * sizeof(U8));
+	for ( int i = 0; i < initialCapacity; i++ ) pOps->pDEBUGval_opCodeTypes[i] = 0;
+	pOps->pDEBUGval_opCodeValues = malloc((initialCapacity) * sizeof(U32));
+	for ( int i = 0; i < initialCapacity; i++ ) pOps->pDEBUGval_opCodeValues[i] = 0;
 #endif // ENABLE_JITOPS_TYPEINFO
 	pOps->pSequencePoints = malloc((initialCapacity) * sizeof(I32));
 }
@@ -79,7 +82,8 @@ static void InitOps( tOps *pOps, U32 initialCapacity ) {
 static void DeleteOps( tOps *pOps ) {
 	free(pOps->pValues);
 #ifdef ENABLE_JITOPS_TYPEINFO
-	free(pOps->pTypes);
+	free(pOps->pDEBUGval_opCodeTypes);
+	free(pOps->pDEBUGval_opCodeValues);
 #endif // ENABLE_JITOPS_TYPEINFO
 	free(pOps->pSequencePoints);
 }
@@ -98,14 +102,14 @@ static U64 Translate(U32 op, U32 getDynamic) {
 	}
 }
 
-#define PushU32(v) PushU32_(&ops, (U32)(v), -1, JITOPS_TYPE_VAL_32)
-#define PushI32(v) PushU32_(&ops, (U32)(v), -1, JITOPS_TYPE_VAL_32)
-#define PushFloat(v) convFloat.f = (float)(v); PushU32_(&ops, convFloat.u32, -1, JITOPS_TYPE_VAL_32)
-#define PushDouble(v) convDouble.d = (double)(v); PushU32_(&ops, convDouble.u32.a, -1, JITOPS_TYPE_VAL_64); PushU32_(&ops, convDouble.u32.b, -1, JITOPS_TYPE_64_2ND)
-#define PushPTR(ptr) convDouble.u64 = (U64)(ptr); PushU32_(&ops, convDouble.u32.a, -1, JITOPS_TYPE_PTR_64); PushU32_(&ops, convDouble.u32.b, -1, JITOPS_TYPE_64_2ND)
-#define PushOp(op) convDouble.u64 = Translate((U32)(op), 0); PushU32_(&ops, convDouble.u32.a, -1, JITOPS_TYPE_OP_64); PushU32_(&ops, convDouble.u32.b, nextOpSequencePoint, JITOPS_TYPE_64_2ND)
-#define PushOpParam(op, param) PushOp(op); PushU32_(&ops, (U32)(param), -1, JITOPS_TYPE_VAL_32)
-#define PushBranch() PushU32_(&branchOffsets, ops.ofs, -1, JITOPS_TYPE_BRANCH)
+#define PushU32(v) PushU32_(&ops, (U32)(v), -1, JITOPS_TYPE_VAL_32, -1)
+#define PushI32(v) PushU32_(&ops, (U32)(v), -1, JITOPS_TYPE_VAL_32, -1)
+#define PushFloat(v) convFloat.f = (float)(v); PushU32_(&ops, convFloat.u32, -1, JITOPS_TYPE_VAL_32, -1)
+#define PushDouble(v) convDouble.d = (double)(v); PushU32_(&ops, convDouble.u32.a, -1, JITOPS_TYPE_VAL_64, -1); PushU32_(&ops, convDouble.u32.b, -1, JITOPS_TYPE_64_2ND, -1)
+#define PushPTR(ptr) convDouble.u64 = (U64)(ptr); PushU32_(&ops, convDouble.u32.a, -1, JITOPS_TYPE_PTR_64, -1); PushU32_(&ops, convDouble.u32.b, -1, JITOPS_TYPE_64_2ND, -1)
+#define PushOp(op) convDouble.u64 = Translate((U32)(op), 0); PushU32_(&ops, convDouble.u32.a, -1, JITOPS_TYPE_OP_64, op); PushU32_(&ops, convDouble.u32.b, nextOpSequencePoint, JITOPS_TYPE_64_2ND, -1)
+#define PushOpParam(op, param) PushOp(op); PushU32_(&ops, (U32)(param), -1, JITOPS_TYPE_VAL_32, -1)
+#define PushBranch() PushU32_(&branchOffsets, ops.ofs, -1, JITOPS_TYPE_BRANCH, -2)
 
 #define PushStackType(type) PushStackType_(&typeStack, type)
 #define PopStackType() (typeStack.ppTypes[--typeStack.ofs])
@@ -131,7 +135,7 @@ static void PushStackType_(tTypeStack *pTypeStack, tMD_TypeDef *pType) {
 	//log_f( 3, "Stack ofs = %d; Max stack size: %d (0x%x)\n", pTypeStack->ofs, size, size );
 }
 
-static void PushU32_(tOps *pOps, U32 v, I32 opSequencePoint, U8 type) {
+static void PushU32_(tOps *pOps, U32 v, I32 opSequencePoint, U8 type, int opCodeValue) {
 	if (pOps->ofs >= pOps->capacity) {
 #ifdef ENABLE_JITOPS_TYPEINFO
 		U32 oldCapacity = pOps->capacity;
@@ -139,14 +143,17 @@ static void PushU32_(tOps *pOps, U32 v, I32 opSequencePoint, U8 type) {
 		pOps->capacity <<= 1;
 		pOps->pValues = realloc(pOps->pValues, pOps->capacity * sizeof(U32));
 #ifdef ENABLE_JITOPS_TYPEINFO
-		pOps->pTypes = realloc(pOps->pTypes, pOps->capacity * sizeof(U8));
-		for ( int i = oldCapacity; i < pOps->capacity; i++ ) pOps->pTypes[i] = 0;
+		pOps->pDEBUGval_opCodeTypes = realloc(pOps->pDEBUGval_opCodeTypes, pOps->capacity * sizeof(U8));
+		for ( int i = oldCapacity; i < pOps->capacity; i++ ) pOps->pDEBUGval_opCodeTypes[i] = 0;
+		pOps->pDEBUGval_opCodeValues = realloc(pOps->pDEBUGval_opCodeValues, pOps->capacity * sizeof(U32));
+		for ( int i = oldCapacity; i < pOps->capacity; i++ ) pOps->pDEBUGval_opCodeValues[i] = 0;
 #endif // ENABLE_JITOPS_TYPEINFO
 		pOps->pSequencePoints = realloc(pOps->pSequencePoints, pOps->capacity * sizeof(U32));
 	}
 	pOps->pSequencePoints[pOps->ofs] = opSequencePoint;
 #ifdef ENABLE_JITOPS_TYPEINFO
-	pOps->pTypes[pOps->ofs] = type;
+	pOps->pDEBUGval_opCodeTypes[pOps->ofs] = type;
+	pOps->pDEBUGval_opCodeValues[pOps->ofs] = opCodeValue;
 #endif // ENABLE_JITOPS_TYPEINFO
 	pOps->pValues[pOps->ofs++] = v;
 }
@@ -254,6 +261,16 @@ static U32 GenCombined(tOps *pOps, tOps *pIsDynamic, U32 startOfs, U32 count, U3
 
 int JITit_call_counter = 0;
 
+// 20240802 moved variable "dynamicallyBoxReturnValue" outside JITit() function 
+// because at 64bit gcc 12.2.0 + valgrind-3.19.0 still reported uninitialized use:
+
+// ==3328== Conditional jump or move depends on uninitialised value(s)
+// ==3328==    at 0x10F309: JITit (JIT.c:760)
+// ==3328==  Uninitialised value was created by a stack allocation
+// ==3328==    at 0x10E0E3: JITit (JIT.c:267)
+
+U8 dynamicallyBoxReturnValue; // 20240802 moved here from the original position.
+
 static U32* JITit(tMD_MethodDef *pMethodDef, U8 *pCIL, U32 codeSize, tParameter *pLocals, tJITted *pJITted, U32 genCombinedOpcodes, I32 **ppSequencePoints) {
 	U32 maxStack = pJITted->maxStack;
 	U32 i;
@@ -293,6 +310,8 @@ tMD_TypeDef *pTmpType;
 
 	pMetaData = pMethodDef->pMetaData;
 	pDebugMetadata = pMetaData->debugMetadata;
+
+	U8 isValueType;
 
     // TODO: Use a hash table as this is super slow
     if (pDebugMetadata != NULL) {
@@ -335,7 +354,7 @@ tMD_TypeDef *pTmpType;
 			tTypeStack *pTypeStack;
 
 			ppTypeStacks[pEx->handlerStart] = pTypeStack = TMALLOC(tTypeStack);
-			pTypeStack->maxBytes = 4;
+			pTypeStack->maxBytes = 8; // 64bit
 			pTypeStack->ofs = 1;
 			pTypeStack->ppTypes = TMALLOC(tMD_TypeDef*);
 			pTypeStack->ppTypes[0] = pEx->pCatchTypeDef;
@@ -346,8 +365,6 @@ tMD_TypeDef *pTmpType;
 	InitOps(&branchOffsets, 16);
 
 	cilOfs = 0;
-
-	U8 dynamicallyBoxReturnValue; // 20240731 moved here from the original position.
 
 	int nextOpSequencePoint = -1;
 	do {
@@ -478,11 +495,19 @@ cilLdcI4:
 cilLdArg:
 				pStackType = pMethodDef->pParams[u32Value].pTypeDef;
 				ofs = pMethodDef->pParams[u32Value].offset;
+
+			// 20240802 allow only 32-bit valuetypes use these short forms.
+			isValueType = pStackType->isValueType;
+
+				if (pStackType->stackSize == 4 && ofs < 32 && isValueType) {
+					PushOp(JIT_LOADPARAMLOCAL_0 + (ofs >> 2));
+				} else {
 					PushOpParam(JIT_LOADPARAMLOCAL_TYPEID + pStackType->stackType, ofs);
 					// if it's a valuetype then push the TypeDef of it afterwards
 					if (pStackType->stackType == EVALSTACK_VALUETYPE) {
 						PushPTR(pStackType);
 					}
+				}
 				PushStackType(pStackType);
 				break;
 
@@ -498,11 +523,19 @@ cilLdArg:
 				u32Value = pCIL[cilOfs++];
 				pStackType = PopStackType();
 				ofs = pMethodDef->pParams[u32Value].offset;
+
+			// 20240802 allow only 32-bit valuetypes use these short forms.
+			isValueType = pStackType->isValueType;
+
+				if (pStackType->stackSize == 4 && ofs < 32 && isValueType) {
+					PushOp(JIT_STOREPARAMLOCAL_0 + (ofs >> 2));
+				} else {
 					PushOpParam(JIT_STOREPARAMLOCAL_TYPEID + pStackType->stackType, ofs);
 					// if it's a valuetype then push the TypeDef of it afterwards
 					if (pStackType->stackType == EVALSTACK_VALUETYPE) {
 						PushPTR(pStackType);
 					}
+				}
 				break;
 
 			case CIL_LDLOC_0:
@@ -519,11 +552,19 @@ cilLdArg:
 cilLdLoc:
 				pStackType = pLocals[u32Value].pTypeDef;
 				ofs = pMethodDef->parameterStackSize + pLocals[u32Value].offset;
+
+			// 20240802 allow only 32-bit valuetypes use these short forms.
+			isValueType = pStackType->isValueType;
+
+				if (pStackType->stackSize == 4 && ofs < 32 && isValueType) {
+					PushOp(JIT_LOADPARAMLOCAL_0 + (ofs >> 2));
+				} else {
 					PushOpParam(JIT_LOADPARAMLOCAL_TYPEID + pStackType->stackType, ofs);
 					// if it's a valuetype then push the TypeDef of it afterwards
 					if (pStackType->stackType == EVALSTACK_VALUETYPE) {
 						PushPTR(pStackType);
 					}
+				}
 				PushStackType(pStackType);
 				break;
 
@@ -539,11 +580,19 @@ cilLdLoc:
 cilStLoc:
 				pStackType = PopStackType();
 				ofs = pMethodDef->parameterStackSize + pLocals[u32Value].offset;
+
+			// 20240802 allow only 32-bit valuetypes use these short forms.
+			isValueType = pStackType->isValueType;
+
+				if (pStackType->stackSize == 4 && ofs < 32 && isValueType) {
+					PushOp(JIT_STOREPARAMLOCAL_0 + (ofs >> 2));
+				} else {
 					PushOpParam(JIT_STOREPARAMLOCAL_TYPEID + pStackType->stackType, ofs);
 					// if it's a valuetype then push the TypeDef of it afterwards
 					if (pStackType->stackType == EVALSTACK_VALUETYPE) {
 						PushPTR(pStackType);
 					}
+				}
 				break;
 
 			case CIL_LDLOCA_S:
@@ -581,7 +630,7 @@ cilStLoc:
 				u32Value = TYPE_SYSTEM_DOUBLE;
 				goto cilLdInd;
 			case CIL_LDIND_REF:
-				u32Value = TYPE_SYSTEM_UINT64; // for 64bit only.
+				u32Value = TYPE_SYSTEM_OBJECT;
 				goto cilLdInd;
 			case CIL_LDIND_I:
 				u32Value = TYPE_SYSTEM_INTPTR;
@@ -1259,8 +1308,8 @@ conv2:
 
 			case CIL_LDELEM_REF:
 				PopStackTypeMulti(2); // Don't care what any of these are
-				PushOp(JIT_LOAD_ELEMENT_I64);
-				PushStackType(types[TYPE_SYSTEM_INT64]);
+				PushOp(JIT_LOAD_ELEMENT_U64); // 64bit
+				PushStackType(types[TYPE_SYSTEM_OBJECT]);
 				break;
 
 			case CIL_LDELEM_ANY:
@@ -1626,9 +1675,11 @@ cilLeave:
 		pEx->handlerStart = pJITOffsets[pEx->handlerStart];
 	}
 
+int extraBytes = 0; // for testing only.
+
 	// Change maxStack to indicate the number of bytes needed on the evaluation stack.
-	// This is the largest number of bytes needed by all objects/value-types on the stack,
-	pJITted->maxStack = typeStack.maxBytes;
+	// This is the largest number of bytes needed by all objects/value-types on the stack.
+	pJITted->maxStack = typeStack.maxBytes + extraBytes;
 
 	free(typeStack.ppTypes);
 
@@ -1647,17 +1698,31 @@ cilLeave:
 	pFinalOps = genCombinedOpcodes?malloc(u32Value):mallocForever(u32Value);
 	memcpy(pFinalOps, ops.pValues, u32Value);
 
-
 JITit_call_counter++;
 log_f( 3, "JITit() COMPLETED!!!\n" );
+
+#ifdef ENABLE_JITOPS_TYPEINFO
+int opNumber = 0;
+U8 skipNextOp = 0;
+#endif // ENABLE_JITOPS_TYPEINFO
+
 for ( int ii = 0; ii < ops.ofs; ii++ ) {
 #ifdef ENABLE_JITOPS_TYPEINFO
-	log_f( 3, "FinalOps_DUMP #%d at index=%d :: ptr=%#llx value=%#x type=%d\n", JITit_call_counter, ii, &pFinalOps[ii], pFinalOps[ii], ops.pTypes[ii] );
+	if ( skipNextOp ) {
+		skipNextOp = 0;
+		continue;
+	}
+	if ( ops.pDEBUGval_opCodeTypes[ii] == JITOPS_TYPE_OP_64 ) {
+		// unknown opcodes related here may relate to branching, see the PushBranch() macro.
+		log_f( 3, "FinalOps_DUMP #%d at number=%d :: %s\n", JITit_call_counter, opNumber++, JIT_GetOpCodeName(ops.pDEBUGval_opCodeValues[ii]) );
+		skipNextOp = 1; // the next OP is the JITOPS_TYPE_64_2ND value related to this OP.
+	} else {
+		log_f( 3, "FinalOps_DUMP #%d at index=%d :: ptr=%#x value=%#x type=%d\n", JITit_call_counter, ii, &pFinalOps[ii], pFinalOps[ii], ops.pDEBUGval_opCodeTypes[ii] );
+	}
 #else // ENABLE_JITOPS_TYPEINFO
 	log_f( 3, "FinalOps_DUMP #%d at index=%d :: ptr=%#llx value=%#x\n", JITit_call_counter, ii, &pFinalOps[ii], pFinalOps[ii] );
 #endif // ENABLE_JITOPS_TYPEINFO
 }
-
 
 	pJITted->pDebugMetadataEntry = pDebugMetadataEntry;
 	if (pDebugMetadataEntry != NULL) {
@@ -1671,7 +1736,7 @@ for ( int ii = 0; ii < ops.ofs; ii++ ) {
 #ifdef ENABLE_JITOPS_TYPEINFO
 	u32Value = ops.ofs * sizeof(U8);
 	pJITted->pOpTypes = mallocForever(u32Value);
-	memcpy(pJITted->pOpTypes, ops.pTypes, u32Value);
+	memcpy(pJITted->pOpTypes, ops.pDEBUGval_opCodeTypes, u32Value);
 #endif // ENABLE_JITOPS_TYPEINFO
 
 	DeleteOps(&ops);

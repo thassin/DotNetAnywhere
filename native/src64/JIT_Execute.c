@@ -38,7 +38,7 @@
 #include "System.Reflection.MethodBase.h"
 #include "System.Diagnostics.Debugger.h"
 
-#define CRASH_ON_ERRORS
+//#define CRASH_ON_TYPE_ERRORS
 
 // Global array which stores the absolute addresses of the start and end of all JIT code
 // fragment machine code.
@@ -95,7 +95,7 @@ static void checkOpType_func( int checkTypes, int sizeBytes, int line, PTR pCurO
 	}	*/
 
 /*	if ( sizeBytes == 4 ) {
-		U8 types32 = JITOPS_TYPE_VAL_32 | JITOPS_TYPE_OP_32;
+		U8 types32 = JITOPS_TYPE_VAL_32;
 		if ( ( types32 & typeInfo ) == 0 ) {
 			log_f( 0, "at line %d checkOpType_func() failed: checkTypes=%d typeInfo=%d\n", (int)line, (int)types32, (int)typeInfo );
 		}
@@ -115,7 +115,11 @@ static void checkOpType_func( int checkTypes, int sizeBytes, int line, PTR pCurO
 		U64 tmp = convertOpsToU64( *(U32*)(pCurOp), *(U32*)(pCurOp + 4) );
 		log_f( 3, "checkOpType_func() :: current OPS_64 value is %#llx\n", tmp );
 	} else {
+#ifdef CRASH_ON_TYPE_ERRORS
 		Crash( "checkOpType_func() : sizeBytes has unexpected value %d\n", sizeBytes );
+#else // CRASH_ON_TYPE_ERRORS
+		log_f( 3, "checkOpType_func() WARN : sizeBytes has unexpected value %d\n", sizeBytes );
+#endif // CRASH_ON_TYPE_ERRORS
 	}
 }
 
@@ -196,6 +200,11 @@ if ( printCrashDump == 1234 ) { // MAGIC numberi jolla saa pakotettua tulostukse
 		type = JIT_ParseStackTypeInfo_type( typeInfo );
 		size = JIT_ParseStackTypeInfo_size( typeInfo );
 
+		if ( type == 0 ) {
+			log_f( logLevel, "EVAL-stack-ERROR: type not valid: %d\n", type );
+			error = 1;
+		}
+
 		U32 data = *(U32*)ptrData;
 		ptrData += 4;
 
@@ -225,12 +234,12 @@ if ( printCrashDump == 1234 ) { // MAGIC numberi jolla saa pakotettua tulostukse
 
 	if ( printCrashDump != 0 ) Crash( "EVAL-stack-ERROR: errors detected" );
 
-#ifdef CRASH_ON_ERRORS
+#ifdef CRASH_ON_TYPE_ERRORS
 	if ( error != 0 ) {
 		// call the same method again, setting the crash-flag, to get forced output.
 		JIT_PrintEvalStackDump( pMethodState, upToOffsetB, lineNumber, 1 ); // this will call Crash().
 	}
-#endif // CRASH_ON_ERRORS
+#endif // CRASH_ON_TYPE_ERRORS
 
 	log_f( logLevel, "\n" );
 }
@@ -275,6 +284,11 @@ void PrintPLStackDump( tMethodState* pMethodState, int upToOffsetB, int lineNumb
 		type = JIT_ParseStackTypeInfo_type( typeInfo );
 		size = JIT_ParseStackTypeInfo_size( typeInfo );
 
+		if ( type == 0 ) {
+			log_f( logLevel, "EVAL-stack-ERROR: type not valid: %d\n", type );
+			error = 1;
+		}
+
 		U32 data = *(U32*)ptrData;
 		ptrData += 4;
 
@@ -304,12 +318,12 @@ void PrintPLStackDump( tMethodState* pMethodState, int upToOffsetB, int lineNumb
 
 	if ( printCrashDump != 0 ) Crash( "PL-stack-ERROR: errors detected" );
 
-#ifdef CRASH_ON_ERRORS
+#ifdef CRASH_ON_TYPE_ERRORS
 	if ( error != 0 ) {
 		// call the same method again, setting the crash-flag, to get forced output.
 		PrintPLStackDump( pMethodState, upToOffsetB, lineNumber, 1 ); // this will call Crash().
 	}
-#endif // CRASH_ON_ERRORS
+#endif // CRASH_ON_TYPE_ERRORS
 
 	log_f( logLevel, "\n" );
 }
@@ -323,6 +337,15 @@ log_f( 3, "PushEvalStackItemType() :: dataSize=%d shift=%d type=%d offsetB=%d ::
 
 	if ( dataSize % 4 != 0 ) Crash( "PushEvalStackItemType() :: bad dataSize %d", dataSize );
 	if ( type < 1 || type > 3 ) Crash( "PushEvalStackItemType() :: bad type %d", type );
+
+int position = offsetB + shift;
+if ( position < 0 ) {
+	Crash( "EVALstack underflow: %d", position );
+}
+int max = pMethodState->pJIT->maxStack;
+if ( position >= max ) {
+	Crash( "EVALstack overflow: %d vs %d", position, max );
+}
 
 	U8* pCurrentTypeInfo = pMethodState->pEvalStackTypeInfo;
 	pCurrentTypeInfo += ( ( offsetB + shift ) >> 2 );
@@ -351,6 +374,15 @@ log_f( 3, "PushPLStackItemType() :: dataSize=%d shift=%d type=%d offsetB=%d :: "
 
 	if ( dataSize % 4 != 0 ) Crash( "PushPLStackItemType() :: bad dataSize %d", dataSize );
 	if ( type < 1 || type > 3 ) Crash( "PushPLStackItemType() :: bad type %d", type );
+
+int position = offsetB + shift;
+if ( position < 0 ) {
+	Crash( "PLstack underflow: %d", position );
+}
+int max = pMethodState->pJIT->maxStack;
+if ( position >= max ) {
+	Crash( "PLstack overflow: %d vs %d", position, max );
+}
 
 	U8* pCurrentTypeInfo = pMethodState->pParamsLocalsTypeInfo;
 	pCurrentTypeInfo += ( ( offsetB + shift ) >> 2 );
@@ -408,11 +440,18 @@ log_f( 3, "CheckEvalStackItemType() :: opSize=%d shift=%d offsetB=%d :: ", opSiz
 	int type = JIT_ParseStackTypeInfo_type( typeInfo );
 	int size = JIT_ParseStackTypeInfo_size( typeInfo );
 
+	int error = 0;
+
 	log_f( 3, "CheckEvalStackItemType() stage-1 : typeInfo=%d type=%d size=%d at offsetB=%d\n", typeInfo, type, size, offsetB );
+
+	if ( type == 0 ) {
+		log_f( logLevel, "CheckEvalStackItemType() FAILED-1: type not valid: %d\n", type );
+		error = 1;
+        }
 
 	if ( opSize != size ) {
 		log_f( 0, "CheckEvalStackItemType() FAILED at stage-1 : %d vs %d\n", opSize, size );
-		JIT_PrintEvalStackDump( pMethodState, offsetB_original, line_number, 1 ); // will call Crash().
+		error = 1;
 	}
 
 	// check stage-2 is only applied if opSize == 4.
@@ -429,13 +468,25 @@ log_f( 3, "CheckEvalStackItemType() :: opSize=%d shift=%d offsetB=%d :: ", opSiz
 		type = JIT_ParseStackTypeInfo_type( typeInfo );
 		size = JIT_ParseStackTypeInfo_size( typeInfo );
 
+		if ( type == 0 ) {
+			log_f( logLevel, "CheckEvalStackItemType() FAILED-2: type not valid: %d\n", type );
+			error = 1;
+		}
+
 		log_f( 3, "CheckEvalStackItemType() stage-2 : typeInfo=%d type=%d size=%d at offsetB=%d\n", typeInfo, type, size, offsetB );
 
 		if ( opSize != size ) {
 			log_f( 0, "CheckEvalStackItemType() FAILED at stage-2 : %d vs %d\n", opSize, size );
-			JIT_PrintEvalStackDump( pMethodState, offsetB_original, line_number, 1 ); // will call Crash().
+			error = 1;
 		}
 	}
+
+#ifdef CRASH_ON_TYPE_ERRORS
+	if ( error != 0 ) {
+		JIT_PrintEvalStackDump( pMethodState, offsetB_original, line_number, 1 ); // will call Crash().
+	}
+#endif // CRASH_ON_TYPE_ERRORS
+	
 }
 
 #define READ_EVALSTACKITEM_TYPE( shift ) \
@@ -918,8 +969,8 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 		GET_LABELS_DYNAMIC(JIT_POP_4, 0);
 		GET_LABELS_DYNAMIC(JIT_LOAD_F32, 4);
 
-		GET_LABELS_DYNAMIC(JIT_LOADPARAMLOCAL_INT64, 4);
 		GET_LABELS_DYNAMIC(JIT_LOADPARAMLOCAL_INT32, 4);
+		GET_LABELS_DYNAMIC(JIT_LOADPARAMLOCAL_INT64, 4);
 		GET_LABELS_DYNAMIC(JIT_LOADPARAMLOCAL_INTNATIVE, 4);
 		GET_LABELS_DYNAMIC(JIT_LOADPARAMLOCAL_F32, 4);
 		GET_LABELS_DYNAMIC(JIT_LOADPARAMLOCAL_F64, 4);
@@ -927,8 +978,17 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 		GET_LABELS_DYNAMIC(JIT_LOADPARAMLOCAL_O, 4);
 		GET_LABELS(JIT_LOADPARAMLOCAL_VALUETYPE);
 
-		GET_LABELS_DYNAMIC(JIT_STOREPARAMLOCAL_INT64, 4);
+		GET_LABELS_DYNAMIC(JIT_LOADPARAMLOCAL_0, 0);
+		GET_LABELS_DYNAMIC(JIT_LOADPARAMLOCAL_1, 0);
+		GET_LABELS_DYNAMIC(JIT_LOADPARAMLOCAL_2, 0);
+		GET_LABELS_DYNAMIC(JIT_LOADPARAMLOCAL_3, 0);
+		GET_LABELS_DYNAMIC(JIT_LOADPARAMLOCAL_4, 0);
+		GET_LABELS_DYNAMIC(JIT_LOADPARAMLOCAL_5, 0);
+		GET_LABELS_DYNAMIC(JIT_LOADPARAMLOCAL_6, 0);
+		GET_LABELS_DYNAMIC(JIT_LOADPARAMLOCAL_7, 0);
+
 		GET_LABELS_DYNAMIC(JIT_STOREPARAMLOCAL_INT32, 4);
+		GET_LABELS_DYNAMIC(JIT_STOREPARAMLOCAL_INT64, 4);
 		GET_LABELS_DYNAMIC(JIT_STOREPARAMLOCAL_INTNATIVE, 4);
 		GET_LABELS_DYNAMIC(JIT_STOREPARAMLOCAL_F32, 4);
 		GET_LABELS_DYNAMIC(JIT_STOREPARAMLOCAL_F64, 4);
@@ -936,8 +996,17 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 		GET_LABELS_DYNAMIC(JIT_STOREPARAMLOCAL_O, 4);
 		GET_LABELS(JIT_STOREPARAMLOCAL_VALUETYPE);
 
-		GET_LABELS(JIT_STOREFIELD_INT64);
+		GET_LABELS_DYNAMIC(JIT_STOREPARAMLOCAL_0, 0);
+		GET_LABELS_DYNAMIC(JIT_STOREPARAMLOCAL_1, 0);
+		GET_LABELS_DYNAMIC(JIT_STOREPARAMLOCAL_2, 0);
+		GET_LABELS_DYNAMIC(JIT_STOREPARAMLOCAL_3, 0);
+		GET_LABELS_DYNAMIC(JIT_STOREPARAMLOCAL_4, 0);
+		GET_LABELS_DYNAMIC(JIT_STOREPARAMLOCAL_5, 0);
+		GET_LABELS_DYNAMIC(JIT_STOREPARAMLOCAL_6, 0);
+		GET_LABELS_DYNAMIC(JIT_STOREPARAMLOCAL_7, 0);
+
 		GET_LABELS(JIT_STOREFIELD_INT32);
+		GET_LABELS(JIT_STOREFIELD_INT64);
 		GET_LABELS(JIT_STOREFIELD_INTNATIVE);
 		GET_LABELS(JIT_STOREFIELD_F32);
 		GET_LABELS(JIT_STOREFIELD_F64);
@@ -946,24 +1015,25 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 		GET_LABELS(JIT_STOREFIELD_VALUETYPE);
 
 		GET_LABELS(JIT_LOADSTATICFIELD_CHECKTYPEINIT_INT32);
-		GET_LABELS(JIT_LOADSTATICFIELD_CHECKTYPEINIT_VALUETYPE);
-		GET_LABELS(JIT_LOADSTATICFIELD_CHECKTYPEINIT_O);
+		GET_LABELS(JIT_LOADSTATICFIELD_CHECKTYPEINIT_INT64);
 		GET_LABELS(JIT_LOADSTATICFIELD_CHECKTYPEINIT_INTNATIVE);
-		GET_LABELS(JIT_LOADSTATICFIELD_CHECKTYPEINIT_PTR);
 		GET_LABELS(JIT_LOADSTATICFIELD_CHECKTYPEINIT_F32);
 		GET_LABELS(JIT_LOADSTATICFIELD_CHECKTYPEINIT_F64);
+		GET_LABELS(JIT_LOADSTATICFIELD_CHECKTYPEINIT_PTR);
+		GET_LABELS(JIT_LOADSTATICFIELD_CHECKTYPEINIT_O);
+		GET_LABELS(JIT_LOADSTATICFIELD_CHECKTYPEINIT_VALUETYPE);
 
 		GET_LABELS(JIT_STORESTATICFIELD_INT32);
 		GET_LABELS(JIT_STORESTATICFIELD_INT64);
-		GET_LABELS(JIT_STORESTATICFIELD_O);
+		GET_LABELS(JIT_STORESTATICFIELD_INTNATIVE);
 		GET_LABELS(JIT_STORESTATICFIELD_F32);
 		GET_LABELS(JIT_STORESTATICFIELD_F64);
-		GET_LABELS(JIT_STORESTATICFIELD_INTNATIVE);
 		GET_LABELS(JIT_STORESTATICFIELD_PTR);
+		GET_LABELS(JIT_STORESTATICFIELD_O);
 		GET_LABELS(JIT_STORESTATICFIELD_VALUETYPE);
 
-		GET_LABELS(JIT_BOX_INT64);
 		GET_LABELS(JIT_BOX_INT32);
+		GET_LABELS(JIT_BOX_INT64);
 		GET_LABELS(JIT_BOX_INTNATIVE);
 		GET_LABELS(JIT_BOX_F32);
 		GET_LABELS(JIT_BOX_F64);
@@ -1015,6 +1085,8 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 		GET_LABELS(JIT_BGE_I64I64);
 		GET_LABELS(JIT_BGE_F32F32);
 		GET_LABELS(JIT_BGE_F64F64);
+		GET_LABELS(JIT_BGE_UN_I32I32);
+		GET_LABELS(JIT_BGE_UN_I64I64);
 		GET_LABELS(JIT_BGE_UN_F32F32);
 		GET_LABELS(JIT_BGE_UN_F64F64);
 
@@ -1022,6 +1094,8 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 		GET_LABELS(JIT_BGT_I64I64);
 		GET_LABELS(JIT_BGT_F32F32);
 		GET_LABELS(JIT_BGT_F64F64);
+		GET_LABELS(JIT_BGT_UN_I32I32);
+		GET_LABELS(JIT_BGT_UN_I64I64);
 		GET_LABELS(JIT_BGT_UN_F32F32);
 		GET_LABELS(JIT_BGT_UN_F64F64);
 
@@ -1029,6 +1103,8 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 		GET_LABELS(JIT_BLE_I64I64);
 		GET_LABELS(JIT_BLE_F32F32);
 		GET_LABELS(JIT_BLE_F64F64);
+		GET_LABELS(JIT_BLE_UN_I32I32);
+		GET_LABELS(JIT_BLE_UN_I64I64);
 		GET_LABELS(JIT_BLE_UN_F32F32);
 		GET_LABELS(JIT_BLE_UN_F64F64);
 
@@ -1036,6 +1112,8 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 		GET_LABELS(JIT_BLT_I64I64);
 		GET_LABELS(JIT_BLT_F32F32);
 		GET_LABELS(JIT_BLT_F64F64);
+		GET_LABELS(JIT_BLT_UN_I32I32);
+		GET_LABELS(JIT_BLT_UN_I64I64);
 		GET_LABELS(JIT_BLT_UN_F32F32);
 		GET_LABELS(JIT_BLT_UN_F64F64);
 
@@ -1043,11 +1121,6 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 		GET_LABELS(JIT_BNE_UN_I64I64);
 		GET_LABELS(JIT_BNE_UN_F32F32);
 		GET_LABELS(JIT_BNE_UN_F64F64);
-
-		GET_LABELS(JIT_BGE_UN_I32I32);
-		GET_LABELS(JIT_BGT_UN_I32I32);
-		GET_LABELS(JIT_BLE_UN_I32I32);
-		GET_LABELS(JIT_BLT_UN_I32I32);
 
 		GET_LABELS_DYNAMIC(JIT_SHL_I32, 0);
 		GET_LABELS_DYNAMIC(JIT_SHR_I32, 0);
@@ -1094,14 +1167,14 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 		GET_LABELS_DYNAMIC(JIT_CONV_U32_R64, 0);
 		GET_LABELS_DYNAMIC(JIT_CONV_I64_I32, 4);
 		GET_LABELS_DYNAMIC(JIT_CONV_I64_U32, 4);
-		GET_LABELS_DYNAMIC(JIT_CONV_I64_I64, 0); // added 20230317 (64bit IntPtr.ToString)
+		GET_LABELS_DYNAMIC(JIT_CONV_I64_I64, 0);
 		GET_LABELS_DYNAMIC(JIT_CONV_I64_U64, 0);
 		GET_LABELS_DYNAMIC(JIT_CONV_I64_R32, 0);
 		GET_LABELS_DYNAMIC(JIT_CONV_I64_R64, 0);
 		GET_LABELS_DYNAMIC(JIT_CONV_U64_I32, 4);
 		GET_LABELS_DYNAMIC(JIT_CONV_U64_U32, 4);
 		GET_LABELS_DYNAMIC(JIT_CONV_U64_I64, 0);
-		GET_LABELS_DYNAMIC(JIT_CONV_U64_U64, 0); // added 20230317 (64bit IntPtr.ToString)
+		GET_LABELS_DYNAMIC(JIT_CONV_U64_U64, 0);
 		GET_LABELS_DYNAMIC(JIT_CONV_U64_R32, 0);
 		GET_LABELS_DYNAMIC(JIT_CONV_U64_R64, 0);
 		GET_LABELS_DYNAMIC(JIT_CONV_R32_I32, 4);
@@ -1127,6 +1200,7 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 		GET_LABELS(JIT_LOAD_ELEMENT_I32);
 		GET_LABELS(JIT_LOAD_ELEMENT_U32);
 		GET_LABELS(JIT_LOAD_ELEMENT_I64);
+		GET_LABELS(JIT_LOAD_ELEMENT_U64);
 		GET_LABELS(JIT_LOAD_ELEMENT_R32);
 		GET_LABELS(JIT_LOAD_ELEMENT_R64);
 
@@ -1182,18 +1256,18 @@ noCode:
 JIT_NOP_start:
 JIT_CONV_R32_R32_start:
 JIT_CONV_R64_R64_start:
-JIT_CONV_I64_I64_start: // added 20230317
+JIT_CONV_I64_I64_start:
 JIT_CONV_I64_U64_start:
 JIT_CONV_U64_I64_start:
-JIT_CONV_U64_U64_start: // added 20230317
+JIT_CONV_U64_U64_start:
 	OPCODE_USE(JIT_NOP);
 JIT_NOP_end:
 JIT_CONV_R32_R32_end:
 JIT_CONV_R64_R64_end:
-JIT_CONV_I64_I64_end: // added 20230317
+JIT_CONV_I64_I64_end:
 JIT_CONV_I64_U64_end:
 JIT_CONV_U64_I64_end:
-JIT_CONV_U64_U64_end: // added 20230317
+JIT_CONV_U64_U64_end:
 JIT_GoNext_start:
 	GO_NEXT();
 JIT_GoNext_end:
@@ -1279,8 +1353,6 @@ JIT_LOAD_I64_start:
 JIT_LOAD_F64_start:
 	OPCODE_USE(JIT_LOAD_I64);
 	{
-	//	U64 value = *(U64*)pCurOp;
-	//	pCurOp += 2;
 		U64 value = (U64)GET_OP_64( JITOPS_TYPE_VAL_64 );
 		PUSH_U64(value);
 	}
@@ -1347,6 +1419,54 @@ JIT_LOADPARAMLOCAL_VALUETYPE_start:
 		PUSH_VALUETYPE(pMem, pTypeDef->stackSize, pTypeDef->stackSize);
 	}
 JIT_LOADPARAMLOCAL_VALUETYPE_end:
+	GO_NEXT();
+
+JIT_LOADPARAMLOCAL_0_start:
+	OPCODE_USE(JIT_LOADPARAMLOCAL_0);
+	PUSH_U32(PARAMLOCAL_U32(0));
+JIT_LOADPARAMLOCAL_0_end:
+	GO_NEXT();
+
+JIT_LOADPARAMLOCAL_1_start:
+	OPCODE_USE(JIT_LOADPARAMLOCAL_1);
+	PUSH_U32(PARAMLOCAL_U32(4));
+JIT_LOADPARAMLOCAL_1_end:
+	GO_NEXT();
+
+JIT_LOADPARAMLOCAL_2_start:
+	OPCODE_USE(JIT_LOADPARAMLOCAL_2);
+	PUSH_U32(PARAMLOCAL_U32(8));
+JIT_LOADPARAMLOCAL_2_end:
+	GO_NEXT();
+
+JIT_LOADPARAMLOCAL_3_start:
+	OPCODE_USE(JIT_LOADPARAMLOCAL_3);
+	PUSH_U32(PARAMLOCAL_U32(12));
+JIT_LOADPARAMLOCAL_3_end:
+	GO_NEXT();
+
+JIT_LOADPARAMLOCAL_4_start:
+	OPCODE_USE(JIT_LOADPARAMLOCAL_4);
+	PUSH_U32(PARAMLOCAL_U32(16));
+JIT_LOADPARAMLOCAL_4_end:
+	GO_NEXT();
+
+JIT_LOADPARAMLOCAL_5_start:
+	OPCODE_USE(JIT_LOADPARAMLOCAL_5);
+	PUSH_U32(PARAMLOCAL_U32(20));
+JIT_LOADPARAMLOCAL_5_end:
+	GO_NEXT();
+
+JIT_LOADPARAMLOCAL_6_start:
+	OPCODE_USE(JIT_LOADPARAMLOCAL_6);
+	PUSH_U32(PARAMLOCAL_U32(24));
+JIT_LOADPARAMLOCAL_6_end:
+	GO_NEXT();
+
+JIT_LOADPARAMLOCAL_7_start:
+	OPCODE_USE(JIT_LOADPARAMLOCAL_7);
+	PUSH_U32(PARAMLOCAL_U32(28));
+JIT_LOADPARAMLOCAL_7_end:
 	GO_NEXT();
 
 JIT_LOAD_PARAMLOCAL_ADDR_start:
@@ -1418,6 +1538,54 @@ JIT_STOREPARAMLOCAL_VALUETYPE_start:
 		POP_VALUETYPE(pMem, pTypeDef->stackSize, pTypeDef->stackSize);
 	}
 JIT_STOREPARAMLOCAL_VALUETYPE_end:
+	GO_NEXT();
+
+JIT_STOREPARAMLOCAL_0_start:
+	OPCODE_USE(JIT_STOREPARAMLOCAL_0);
+	PARAMLOCAL_U32(0) = POP_U32();
+JIT_STOREPARAMLOCAL_0_end:
+	GO_NEXT();
+
+JIT_STOREPARAMLOCAL_1_start:
+	OPCODE_USE(JIT_STOREPARAMLOCAL_1);
+	PARAMLOCAL_U32(4) = POP_U32();
+JIT_STOREPARAMLOCAL_1_end:
+	GO_NEXT();
+
+JIT_STOREPARAMLOCAL_2_start:
+	OPCODE_USE(JIT_STOREPARAMLOCAL_2);
+	PARAMLOCAL_U32(8) = POP_U32();
+JIT_STOREPARAMLOCAL_2_end:
+	GO_NEXT();
+
+JIT_STOREPARAMLOCAL_3_start:
+	OPCODE_USE(JIT_STOREPARAMLOCAL_3);
+	PARAMLOCAL_U32(12) = POP_U32();
+JIT_STOREPARAMLOCAL_3_end:
+	GO_NEXT();
+
+JIT_STOREPARAMLOCAL_4_start:
+	OPCODE_USE(JIT_STOREPARAMLOCAL_4);
+	PARAMLOCAL_U32(16) = POP_U32();
+JIT_STOREPARAMLOCAL_4_end:
+	GO_NEXT();
+
+JIT_STOREPARAMLOCAL_5_start:
+	OPCODE_USE(JIT_STOREPARAMLOCAL_5);
+	PARAMLOCAL_U32(20) = POP_U32();
+JIT_STOREPARAMLOCAL_5_end:
+	GO_NEXT();
+
+JIT_STOREPARAMLOCAL_6_start:
+	OPCODE_USE(JIT_STOREPARAMLOCAL_6);
+	PARAMLOCAL_U32(24) = POP_U32();
+JIT_STOREPARAMLOCAL_6_end:
+	GO_NEXT();
+
+JIT_STOREPARAMLOCAL_7_start:
+	OPCODE_USE(JIT_STOREPARAMLOCAL_7);
+	PARAMLOCAL_U32(28) = POP_U32();
+JIT_STOREPARAMLOCAL_7_end:
 	GO_NEXT();
 
 JIT_LOADINDIRECT_I8_start:
@@ -2292,6 +2460,20 @@ JIT_BGE_UN_I32I32_start:
 JIT_BGE_UN_I32I32_end:
 	GO_NEXT_CHECK();
 
+JIT_BGE_UN_I64I64_start:
+	OPCODE_USE(JIT_BGE_UN_I64I64);
+	{
+		U64 v1, v2;
+		U32 ofs;
+		POP_U64_U64(v1, v2);
+		ofs = GET_OP_32( 0 );
+		if (v1 >= v2) {
+			pCurOp = pOps + ofs;
+		}
+	}
+JIT_BGE_UN_I64I64_end:
+	GO_NEXT_CHECK();
+
 JIT_BGT_UN_I32I32_start:
 	OPCODE_USE(JIT_BGT_UN_I32I32);
 	{
@@ -2303,6 +2485,20 @@ JIT_BGT_UN_I32I32_start:
 		}
 	}
 JIT_BGT_UN_I32I32_end:
+	GO_NEXT_CHECK();
+
+JIT_BGT_UN_I64I64_start:
+	OPCODE_USE(JIT_BGT_UN_I64I64);
+	{
+		U64 v1, v2;
+		U32 ofs;
+		POP_U64_U64(v1, v2);
+		ofs = GET_OP_32( 0 );
+		if (v1 > v2) {
+			pCurOp = pOps + ofs;
+		}
+	}
+JIT_BGT_UN_I64I64_end:
 	GO_NEXT_CHECK();
 
 JIT_BLE_UN_I32I32_start:
@@ -2318,6 +2514,20 @@ JIT_BLE_UN_I32I32_start:
 JIT_BLE_UN_I32I32_end:
 	GO_NEXT_CHECK();
 
+JIT_BLE_UN_I64I64_start:
+	OPCODE_USE(JIT_BLE_UN_I64I64);
+	{
+		U64 v1, v2;
+		U32 ofs;
+		POP_U64_U64(v1, v2);
+		ofs = GET_OP_32( 0 );
+		if (v1 <= v2) {
+			pCurOp = pOps + ofs;
+		}
+	}
+JIT_BLE_UN_I64I64_end:
+	GO_NEXT_CHECK();
+
 JIT_BLT_UN_I32I32_start:
 	OPCODE_USE(JIT_BLT_UN_I32I32);
 	{
@@ -2329,6 +2539,20 @@ JIT_BLT_UN_I32I32_start:
 		}
 	}
 JIT_BLT_UN_I32I32_end:
+	GO_NEXT_CHECK();
+
+JIT_BLT_UN_I64I64_start:
+	OPCODE_USE(JIT_BLT_UN_I64I64);
+	{
+		U64 v1, v2;
+		U32 ofs;
+		POP_U64_U64(v1, v2);
+		ofs = GET_OP_32( 0 );
+		if (v1 < v2) {
+			pCurOp = pOps + ofs;
+		}
+	}
+JIT_BLT_UN_I64I64_end:
 	GO_NEXT_CHECK();
 
 JIT_CEQ_I32I32_start: // Handles I32 and O
@@ -2997,9 +3221,9 @@ JIT_CONV_R64_R32_end:
 JIT_LOADFUNCTION_start:
 	OPCODE_USE(JIT_LOADFUNCTION);
 	{
-		// This is actually a pointer not a U32
-		U32 value = GET_OP_32( 0 );
-		PUSH_U32(value);
+		// This is actually a pointer not a U64.
+		U64 value = GET_OP_64( 0 );
+		PUSH_U64(value); // 64bit
 	}
 JIT_LOADFUNCTION_end:
 	GO_NEXT();
@@ -3234,6 +3458,7 @@ JIT_LOAD_ELEMENT_R32_end:
 	GO_NEXT();
 
 JIT_LOAD_ELEMENT_I64_start:
+JIT_LOAD_ELEMENT_U64_start:
 JIT_LOAD_ELEMENT_R64_start:
 	OPCODE_USE(JIT_LOAD_ELEMENT_I64);
 	{
@@ -3244,6 +3469,7 @@ JIT_LOAD_ELEMENT_R64_start:
 		PUSH_U64(value);
 	}
 JIT_LOAD_ELEMENT_I64_end:
+JIT_LOAD_ELEMENT_U64_end:
 JIT_LOAD_ELEMENT_R64_end:
 	GO_NEXT();
 
@@ -3314,7 +3540,7 @@ JIT_STOREFIELD_INT32_start:
 JIT_STOREFIELD_F32_start:
 	op = JIT_STOREFIELD_F32;
 	goto allStoreField32Start;
-JIT_STOREFIELD_INTNATIVE_start: // only for 32-bit?
+JIT_STOREFIELD_INTNATIVE_start: // intnative is 32bit
 	op = JIT_STOREFIELD_INTNATIVE;
 	goto allStoreField32Start;
 allStoreField32Start:
@@ -3445,7 +3671,7 @@ JIT_LOAD_FIELD_ADDR_end:
 
 JIT_STORESTATICFIELD_INT32_start:
 JIT_STORESTATICFIELD_F32_start:
-JIT_STORESTATICFIELD_INTNATIVE_start: // only for 32-bit?
+JIT_STORESTATICFIELD_INTNATIVE_start: // intnative is 32bit
 	OPCODE_USE(JIT_STORESTATICFIELD_INT32);
 	{
 		tMD_FieldDef *pFieldDef;
@@ -3503,15 +3729,18 @@ JIT_LOADSTATICFIELDADDRESS_CHECKTYPEINIT_start:
 JIT_LOADSTATICFIELD_CHECKTYPEINIT_VALUETYPE_start:
 	op = JIT_LOADSTATICFIELD_CHECKTYPEINIT_VALUETYPE;
 	goto loadStaticFieldStart;
-JIT_LOADSTATICFIELD_CHECKTYPEINIT_F64_start:
-	op = JIT_LOADSTATICFIELD_CHECKTYPEINIT_F64;
-	goto loadStaticFieldStart;
 JIT_LOADSTATICFIELD_CHECKTYPEINIT_INT32_start:
 JIT_LOADSTATICFIELD_CHECKTYPEINIT_F32_start:
-JIT_LOADSTATICFIELD_CHECKTYPEINIT_O_start: // Only for 32-bit
-JIT_LOADSTATICFIELD_CHECKTYPEINIT_INTNATIVE_start: // Only for 32-bit
-JIT_LOADSTATICFIELD_CHECKTYPEINIT_PTR_start: // Only for 32-bit
-	op = 0;
+JIT_LOADSTATICFIELD_CHECKTYPEINIT_INTNATIVE_start: // intnative is 32bit
+	op = JIT_LOADSTATICFIELD_CHECKTYPEINIT_INT32;
+	goto loadStaticFieldStart;
+JIT_LOADSTATICFIELD_CHECKTYPEINIT_INT64_start:
+JIT_LOADSTATICFIELD_CHECKTYPEINIT_F64_start:
+	op = JIT_LOADSTATICFIELD_CHECKTYPEINIT_INT64;
+	goto loadStaticFieldStart;
+JIT_LOADSTATICFIELD_CHECKTYPEINIT_O_start:
+JIT_LOADSTATICFIELD_CHECKTYPEINIT_PTR_start:
+	op = JIT_LOADSTATICFIELD_CHECKTYPEINIT_INT64; // 64bit
 loadStaticFieldStart:
 	OPCODE_USE(JIT_LOADSTATICFIELD_CHECKTYPEINIT_INT32);
 	{
@@ -3540,29 +3769,33 @@ loadStaticFieldStart:
 				GO_NEXT_CHECK();
 			}
 		}
-		if (op == JIT_LOADSTATICFIELD_CHECKTYPEINIT_F64) {
+
+		if (op == JIT_LOADSTATICFIELDADDRESS_CHECKTYPEINIT) {
+			U64 value; // 64bit address
+			value = (U64)(pFieldDef->pMemory);
+			PUSH_U64(value);
+		} else if (op == JIT_LOADSTATICFIELD_CHECKTYPEINIT_INT32 ) {
+			U32 value;
+			value = *(U32*)(pFieldDef->pMemory);
+			PUSH_U32(value);
+		} else if (op == JIT_LOADSTATICFIELD_CHECKTYPEINIT_INT64) {
 			U64 value;
 			value = *(U64*)(pFieldDef->pMemory);
 			PUSH_U64(value);
 		} else if (op == JIT_LOADSTATICFIELD_CHECKTYPEINIT_VALUETYPE) {
 			PUSH_VALUETYPE(pFieldDef->pMemory, pFieldDef->memSize, pFieldDef->memSize);
 		} else {
-			U64 value;
-			if (op == JIT_LOADSTATICFIELDADDRESS_CHECKTYPEINIT) {
-				value = (U64)(pFieldDef->pMemory);
-			} else {
-				value = *(U64*)pFieldDef->pMemory;
-			}
-			PUSH_U64(value);
+			Crash( "JIT_LOADSTATICFIELD unknown op: %d", op );
 		}
 	}
 JIT_LOADSTATICFIELDADDRESS_CHECKTYPEINIT_end:
 JIT_LOADSTATICFIELD_CHECKTYPEINIT_VALUETYPE_end:
 JIT_LOADSTATICFIELD_CHECKTYPEINIT_INT32_end:
+JIT_LOADSTATICFIELD_CHECKTYPEINIT_INT64_end:
+JIT_LOADSTATICFIELD_CHECKTYPEINIT_INTNATIVE_end:
 JIT_LOADSTATICFIELD_CHECKTYPEINIT_F32_end:
 JIT_LOADSTATICFIELD_CHECKTYPEINIT_F64_end:
 JIT_LOADSTATICFIELD_CHECKTYPEINIT_O_end:
-JIT_LOADSTATICFIELD_CHECKTYPEINIT_INTNATIVE_end:
 JIT_LOADSTATICFIELD_CHECKTYPEINIT_PTR_end:
 	GO_NEXT();
 
@@ -3632,7 +3865,7 @@ JIT_BOX_VALUETYPE_end:
 	GO_NEXT();
 
 JIT_BOX_O_start:
-	pCurOp++;
+	pCurOp += 2; // 64bit
 	// Fall-through
 JIT_UNBOX2OBJECT_start: // TODO: This is not correct - it should check the type, just like CAST_CLASS
 	OPCODE_USE(JIT_UNBOX2OBJECT);

@@ -140,6 +140,8 @@ tMethodState* MethodState_Direct(tThread *pThread, tMD_MethodDef *pMethod, tMeth
 	pThis->ipOffset = 0;
 
 	U32 maxStack = pThis->pMethod->pJITted->maxStack;
+
+	U32 safetyBufferBytes = 0;
 	U32 extraBytes = 0;
 
 #ifdef ENABLE_STACKITEMS_TYPEINFO
@@ -152,10 +154,10 @@ tMethodState* MethodState_Direct(tThread *pThread, tMD_MethodDef *pMethod, tMeth
 	extraBytes <<= 2;
 #endif // ENABLE_STACKITEMS_TYPEINFO
 
-	pThis->pEvalStack = (PTR)Thread_StackAlloc(pThread, maxStack + extraBytes);
+	pThis->pEvalStack = (PTR)Thread_StackAlloc(pThread, maxStack + safetyBufferBytes + extraBytes);
 
 #ifdef ENABLE_STACKITEMS_TYPEINFO
-	pThis->pEvalStackTypeInfo = pThis->pEvalStack + maxStack;
+	pThis->pEvalStackTypeInfo = pThis->pEvalStack + maxStack + safetyBufferBytes;
 	for ( int clear = 0; clear < extraBytes; clear++ ) pThis->pEvalStackTypeInfo[clear] = 0;
 #endif // ENABLE_STACKITEMS_TYPEINFO
 

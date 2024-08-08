@@ -48,11 +48,10 @@ typedef int(*fnPInvoke)(STRING libName, STRING funcName, STRING arg0);
 
 #define JITOPS_TYPE_VAL_32		( 1 << 0 )	// 1
 #define JITOPS_TYPE_VAL_64		( 1 << 1 )	// 2
-#define JITOPS_TYPE_OP_32		( 1 << 2 )	// 4
-#define JITOPS_TYPE_OP_64		( 1 << 3 )	// 8
-#define JITOPS_TYPE_PTR_64		( 1 << 4 )	// 16
-#define JITOPS_TYPE_BRANCH		( 1 << 5 )	// 32
-#define JITOPS_TYPE_64_2ND		( 1 << 6 )	// 64
+#define JITOPS_TYPE_OP_64		( 1 << 2 )	// 4
+#define JITOPS_TYPE_PTR_64		( 1 << 3 )	// 8
+#define JITOPS_TYPE_BRANCH		( 1 << 4 )	// 16
+#define JITOPS_TYPE_64_2ND		( 1 << 5 )	// 32
 
 // TommiHassinen 2023:
 // stackitem typeinfo is an U8 value, in which:
