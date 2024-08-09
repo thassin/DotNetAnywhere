@@ -1,12 +1,60 @@
 #! /bin/bash
 
-mcs \
-/nostdlib /noconfig /out:Test07_gc_test.exe \
-/reference:../../tests_BIN/corlib.dll Program.cs
+TESTNAME="Test07_gc_test"
 
-echo
-echo copying Test07_gc_test.exe to tests_BIN
-echo
+CORLIBDLL="../../tests_BIN/corlib.dll"
+TESTDIR="../../tests_BIN"
 
-cp Test07_gc_test.exe ../../tests_BIN
+## build DNA binary.
+
+EXENAME="${TESTNAME}_dna.exe"
+
+rm -f $EXENAME
+
+mcs /nostdlib /noconfig /out:$EXENAME \
+    /reference:$CORLIBDLL \
+    Program.cs
+
+if [ -f $EXENAME ];
+then
+
+    echo
+    echo copying $EXENAME to tests_BIN
+    echo
+    cp $EXENAME $TESTDIR
+    rm -f $EXENAME
+
+else
+
+    echo
+    echo ERROR build failed: $EXENAME
+    echo
+
+fi
+
+## build MONO binary.
+
+EXENAME="${TESTNAME}_mono.exe"
+
+rm -f $EXENAME
+
+mcs /out:$EXENAME \
+    Program.cs
+
+if [ -f $EXENAME ];
+then
+
+    echo
+    echo copying $EXENAME to tests_BIN
+    echo
+    cp $EXENAME $TESTDIR
+    rm -f $EXENAME
+
+else
+
+    echo
+    echo ERROR build failed: $EXENAME
+    echo
+
+fi
 

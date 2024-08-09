@@ -1,34 +1,9 @@
 #! /bin/bash
 
-TESTNAME="Test03_pinvoke"
+TESTNAME="Test01_cmdline_args"
 
 CORLIBDLL="../../tests_BIN/corlib.dll"
 TESTDIR="../../tests_BIN"
-
-## build the test library.
-
-LIBFILE="libpinvoketest/libpinvoketest.so"
-
-echo building the test-library.
-bash -c "cd libpinvoketest && make"
-
-if [ -f $LIBFILE ];
-then
-
-    echo
-    echo copying $LIBFILE to tests_BIN
-    echo
-    cp $LIBFILE $TESTDIR
-
-else
-
-    echo
-    echo ERROR build failed: $LIBFILE
-    echo
-
-fi
-
-bash -c "cd libpinvoketest && make clean"
 
 ## build DNA binary.
 
