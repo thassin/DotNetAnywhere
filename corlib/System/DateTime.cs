@@ -145,6 +145,12 @@ namespace System {
 			}
 		}
 
+		public static DateTime Today {
+			get {
+				return UtcNow.Date;
+			}
+		}
+
 		private enum Which {
 			Day,
 			DayYear,
