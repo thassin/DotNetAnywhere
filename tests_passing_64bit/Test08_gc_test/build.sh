@@ -1,6 +1,6 @@
 #! /bin/bash
 
-TESTNAME="Test07_gc_test"
+TESTNAME="Test08_gc_test"
 
 CORLIBDLL="../../tests_BIN/corlib.dll"
 TESTDIR="../../tests_BIN"
@@ -13,7 +13,7 @@ rm -f $EXENAME
 
 mcs /nostdlib /noconfig /out:$EXENAME \
     /reference:$CORLIBDLL \
-    Program.cs
+    Program.cs ../RandomNumberGenerator.cs
 
 if [ -f $EXENAME ];
 then
@@ -39,7 +39,7 @@ EXENAME="${TESTNAME}_mono.exe"
 rm -f $EXENAME
 
 mcs /out:$EXENAME \
-    Program.cs
+    Program.cs ../RandomNumberGenerator.cs
 
 if [ -f $EXENAME ];
 then

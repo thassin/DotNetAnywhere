@@ -1,10 +1,10 @@
 ﻿using System;
 
-namespace Test02 {
+namespace Test03 {
 
     public class Program {
 
-        private const string TESTCASE = "TESTCASE02 : ";
+        private const string TESTCASE = "TESTCASE03 : ";
 
         private const string TEST_PASSED = "test_passed";
         private const string TEST_FAILED = "test_FAILED";
@@ -27,6 +27,10 @@ namespace Test02 {
             for ( int x = 0; x < sz; x++ ) {
                 sum += arr[x];
             }
+            
+            // TODO test separately: int,float,DateTime arrays at least.
+            // TODO test separately: int,float,DateTime arrays at least.
+            // TODO test separately: int,float,DateTime arrays at least.
 
             Program p = new Program();
             p.FinalReport( sum );

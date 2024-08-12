@@ -1,10 +1,10 @@
 ﻿using System;
 
-namespace Test04 {
+namespace Test05 {
 
     public class Program {
 
-        private const string TESTCASE = "TESTCASE04 : ";
+        private const string TESTCASE = "TESTCASE05 : ";
 
         private const string TEST_PASSED = "test_passed";
         private const string TEST_FAILED = "test_FAILED";
@@ -30,7 +30,12 @@ namespace Test04 {
             TimeSpan ts = new TimeSpan( 1234567890 );
             Console.WriteLine( TESTCASE + "TimeSpan milliseconds = " + ts.TotalMilliseconds );
 
-            DateTime dt = DateTime.UtcNow; // 20240717 TODO "Now" not implemented in DNA.
+            //DateTime dt = DateTime.UtcNow; // 20240717 TODO "Now" not implemented in DNA.
+            //DateTime dt = DateTime.Today.AddHours( 12 ).AddMinutes( 30 ); // write fixed time.
+            DateTime dt = DateTime.Today;
+            dt = dt.AddHours( 12 ); // FIXME something goes wrong here.
+            //dt = dt.AddMinutes( 30 ); // FIXME something goes wrong here.
+            
             Console.WriteLine( TESTCASE + "DateTime default : " + dt );
             Console.WriteLine( TESTCASE + "DateTime formatted : " + dt.ToString( "yyyy-MM-dd HH:mm:ss" ) );
 

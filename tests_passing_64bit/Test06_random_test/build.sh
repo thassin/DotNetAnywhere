@@ -1,34 +1,9 @@
 #! /bin/bash
 
-TESTNAME="Test03_pinvoke"
+TESTNAME="Test06_random_test"
 
 CORLIBDLL="../../tests_BIN/corlib.dll"
 TESTDIR="../../tests_BIN"
-
-## build the test library.
-
-LIBFILE="libpinvoketest/libpinvoketest.so"
-
-echo building the test-library.
-bash -c "cd libpinvoketest && make"
-
-if [ -f $LIBFILE ];
-then
-
-    echo
-    echo copying $LIBFILE to tests_BIN
-    echo
-    cp $LIBFILE $TESTDIR
-
-else
-
-    echo
-    echo ERROR build failed: $LIBFILE
-    echo
-
-fi
-
-bash -c "cd libpinvoketest && make clean"
 
 ## build DNA binary.
 
@@ -38,7 +13,7 @@ rm -f $EXENAME
 
 mcs /nostdlib /noconfig /out:$EXENAME \
     /reference:$CORLIBDLL \
-    Program.cs
+    Program.cs ../RandomNumberGenerator.cs
 
 if [ -f $EXENAME ];
 then
@@ -64,7 +39,7 @@ EXENAME="${TESTNAME}_mono.exe"
 rm -f $EXENAME
 
 mcs /out:$EXENAME \
-    Program.cs
+    Program.cs ../RandomNumberGenerator.cs
 
 if [ -f $EXENAME ];
 then

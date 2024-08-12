@@ -160,29 +160,24 @@ void JIT_PrintEvalStackDump( tMethodState* pMethodState, int upToOffsetB, int li
 	// upToOffsetB is the count of bytes currently stored in evalStack.
 	// printCrashDump is set to non-zero to force output at loglevel-0.
 	
-	int logLevel = 3;
-	if ( printCrashDump != 0 ) logLevel = 0;
-
-if ( printCrashDump == 1234 ) { // MAGIC numberi jolla saa pakotettua tulostuksen mutta ilman Crash() kutsua.
-	printCrashDump = 0; // ei tehdä Crash() -kutsua.
-	logLevel = 2; // haluttu lokitustaso.
-}
+	int tmpLogLevel = 3;
+	if ( printCrashDump != 0 ) tmpLogLevel = 0;
 
 	PTR ptrData = pMethodState->pEvalStack;
 	PTR ptrInfo = pMethodState->pEvalStackTypeInfo;
 
-	log_f( logLevel, "\n" );
-	log_f( logLevel, "*** EVAL-STACK-DUMP ***    instance=%#llx    upToOffset=%d    lineNumber=%d\n", ptrData, upToOffsetB, lineNumber );
+	log_f( tmpLogLevel, "\n" );
+	log_f( tmpLogLevel, "*** EVAL-STACK-DUMP ***    instance=%#llx    upToOffset=%d    lineNumber=%d\n", ptrData, upToOffsetB, lineNumber );
 
 	int error = 0;
 
 	if ( upToOffsetB < 0 ) {
-		log_f( logLevel, "EVAL-stack-ERROR: upToOffsetB %d is negative\n", upToOffsetB );
+		log_f( tmpLogLevel, "EVAL-stack-ERROR: upToOffsetB %d is negative\n", upToOffsetB );
 		error = 1;
         }
 
 	if ( upToOffsetB % 4 != 0 ) {
-		log_f( logLevel, "EVAL-stack-ERROR: upToOffsetB %d is not 32-bit aligned\n", upToOffsetB );
+		log_f( tmpLogLevel, "EVAL-stack-ERROR: upToOffsetB %d is not 32-bit aligned\n", upToOffsetB );
 		error = 1;
 	}
 
@@ -201,24 +196,24 @@ if ( printCrashDump == 1234 ) { // MAGIC numberi jolla saa pakotettua tulostukse
 		size = JIT_ParseStackTypeInfo_size( typeInfo );
 
 		if ( type == 0 ) {
-			log_f( logLevel, "EVAL-stack-ERROR: type not valid: %d\n", type );
+			log_f( tmpLogLevel, "EVAL-stack-ERROR: type not valid: %d\n", type );
 			error = 1;
 		}
 
 		U32 data = *(U32*)ptrData;
 		ptrData += 4;
 
-		log_f( logLevel, "*** EVAL-STACK-DUMP : byte-offset = %d : data=%#x type=%d sizeinfo=%d\n", i, data, type, size );
+		log_f( tmpLogLevel, "*** EVAL-STACK-DUMP : byte-offset = %d : data=%#x type=%d sizeinfo=%d\n", i, data, type, size );
 
 		if ( prev_size != 4 ) {
 			// previous type must be the same as current:
 			if ( prev_type != type ) {
-				log_f( logLevel, "EVAL-stack-ERROR: type-mismatch detected: %d vs %d\n", prev_type, type );
+				log_f( tmpLogLevel, "EVAL-stack-ERROR: type-mismatch detected: %d vs %d\n", prev_type, type );
 				error = 1;
 			}
 			// previous size must be the current size + 4 bytes:
 			if ( prev_size != size + 4 ) {
-				log_f( logLevel, "EVAL-stack-ERROR: size-mismatch detected: %d vs %d\n", prev_size, size );
+				log_f( tmpLogLevel, "EVAL-stack-ERROR: size-mismatch detected: %d vs %d\n", prev_size, size );
 				error = 1;
 			}
 		}
@@ -228,7 +223,7 @@ if ( printCrashDump == 1234 ) { // MAGIC numberi jolla saa pakotettua tulostukse
 	}
 
 	if ( size > 4 ) {
-		log_f( logLevel, "EVAL-stack-ERROR: the last stackitem is truncated: size=%d\n", size );
+		log_f( tmpLogLevel, "EVAL-stack-ERROR: the last stackitem is truncated: size=%d\n", size );
 		error = 1;
 	}
 
@@ -241,7 +236,7 @@ if ( printCrashDump == 1234 ) { // MAGIC numberi jolla saa pakotettua tulostukse
 	}
 #endif // CRASH_ON_TYPE_ERRORS
 
-	log_f( logLevel, "\n" );
+	log_f( tmpLogLevel, "\n" );
 }
 
 void PrintPLStackDump( tMethodState* pMethodState, int upToOffsetB, int lineNumber, int printCrashDump ) {
@@ -249,24 +244,24 @@ void PrintPLStackDump( tMethodState* pMethodState, int upToOffsetB, int lineNumb
 	// upToOffsetB is the count of bytes currently stored in evalStack.
 	// printCrashDump is set to non-zero to force output at loglevel-0.
 	
-	int logLevel = 3;
-	if ( printCrashDump != 0 ) logLevel = 0;
+	int tmpLogLevel = 3;
+	if ( printCrashDump != 0 ) tmpLogLevel = 0;
 
 	PTR ptrData = pMethodState->pParamsLocals;
 	PTR ptrInfo = pMethodState->pParamsLocalsTypeInfo;
 
-	log_f( logLevel, "\n" );
-	log_f( logLevel, "*** PL-STACK-DUMP ***    instance=%#llx    upToOffset=%d\n", ptrData, upToOffsetB );
+	log_f( tmpLogLevel, "\n" );
+	log_f( tmpLogLevel, "*** PL-STACK-DUMP ***    instance=%#llx    upToOffset=%d\n", ptrData, upToOffsetB );
 
 	int error = 0;
 
 	if ( upToOffsetB < 0 ) {
-		log_f( logLevel, "PL-stack-ERROR: upToOffsetB %d is negative\n", upToOffsetB );
+		log_f( tmpLogLevel, "PL-stack-ERROR: upToOffsetB %d is negative\n", upToOffsetB );
 		error = 1;
         }
 
 	if ( upToOffsetB % 4 != 0 ) {
-		log_f( logLevel, "PL-stack-ERROR: upToOffsetB %d is not 32-bit aligned\n", upToOffsetB );
+		log_f( tmpLogLevel, "PL-stack-ERROR: upToOffsetB %d is not 32-bit aligned\n", upToOffsetB );
 		error = 1;
 	}
 
@@ -285,24 +280,24 @@ void PrintPLStackDump( tMethodState* pMethodState, int upToOffsetB, int lineNumb
 		size = JIT_ParseStackTypeInfo_size( typeInfo );
 
 		if ( type == 0 ) {
-			log_f( logLevel, "EVAL-stack-ERROR: type not valid: %d\n", type );
+			log_f( tmpLogLevel, "EVAL-stack-ERROR: type not valid: %d\n", type );
 			error = 1;
 		}
 
 		U32 data = *(U32*)ptrData;
 		ptrData += 4;
 
-		log_f( logLevel, "*** PL-STACK-DUMP : byte-offset = %d : data=%#x type=%d sizeinfo=%d\n", i, data, type, size );
+		log_f( tmpLogLevel, "*** PL-STACK-DUMP : byte-offset = %d : data=%#x type=%d sizeinfo=%d\n", i, data, type, size );
 
 		if ( prev_size != 4 ) {
 			// previous type must be the same as current:
 			if ( prev_type != type ) {
-				log_f( logLevel, "PL-stack-ERROR: type-mismatch detected: %d vs %d\n", prev_type, type );
+				log_f( tmpLogLevel, "PL-stack-ERROR: type-mismatch detected: %d vs %d\n", prev_type, type );
 				error = 1;
 			}
 			// previous size must be the current size + 4 bytes:
 			if ( prev_size != size + 4 ) {
-				log_f( logLevel, "PL-stack-ERROR: size-mismatch detected: %d vs %d\n", prev_size, size );
+				log_f( tmpLogLevel, "PL-stack-ERROR: size-mismatch detected: %d vs %d\n", prev_size, size );
 				error = 1;
 			}
 		}
@@ -312,7 +307,7 @@ void PrintPLStackDump( tMethodState* pMethodState, int upToOffsetB, int lineNumb
 	}
 
 	if ( size > 4 ) {
-		log_f( logLevel, "PL-stack-ERROR: the last stackitem is truncated: size=%d\n", size );
+		log_f( tmpLogLevel, "PL-stack-ERROR: the last stackitem is truncated: size=%d\n", size );
 		error = 1;
 	}
 
@@ -325,7 +320,7 @@ void PrintPLStackDump( tMethodState* pMethodState, int upToOffsetB, int lineNumb
 	}
 #endif // CRASH_ON_TYPE_ERRORS
 
-	log_f( logLevel, "\n" );
+	log_f( tmpLogLevel, "\n" );
 }
 
 #define PUSH_EVALSTACKITEM_TYPE( size, shift, type ) \
@@ -441,16 +436,23 @@ log_f( 3, "CheckEvalStackItemType() :: opSize=%d shift=%d offsetB=%d :: ", opSiz
 	int size = JIT_ParseStackTypeInfo_size( typeInfo );
 
 	int error = 0;
+        int tmpLogLevel = 3;
 
 	log_f( 3, "CheckEvalStackItemType() stage-1 : typeInfo=%d type=%d size=%d at offsetB=%d\n", typeInfo, type, size, offsetB );
 
 	if ( type == 0 ) {
-		log_f( logLevel, "CheckEvalStackItemType() FAILED-1: type not valid: %d\n", type );
+#ifdef CRASH_ON_TYPE_ERRORS
+		tmpLogLevel = 0;
+#endif // CRASH_ON_TYPE_ERRORS
+		log_f( tmpLogLevel, "CheckEvalStackItemType() FAILED-1: type not valid: %d\n", type );
 		error = 1;
         }
 
 	if ( opSize != size ) {
-		log_f( 0, "CheckEvalStackItemType() FAILED at stage-1 : %d vs %d\n", opSize, size );
+#ifdef CRASH_ON_TYPE_ERRORS
+		tmpLogLevel = 0;
+#endif // CRASH_ON_TYPE_ERRORS
+		log_f( tmpLogLevel, "CheckEvalStackItemType() FAILED at stage-1 : %d vs %d\n", opSize, size );
 		error = 1;
 	}
 
@@ -469,14 +471,20 @@ log_f( 3, "CheckEvalStackItemType() :: opSize=%d shift=%d offsetB=%d :: ", opSiz
 		size = JIT_ParseStackTypeInfo_size( typeInfo );
 
 		if ( type == 0 ) {
-			log_f( logLevel, "CheckEvalStackItemType() FAILED-2: type not valid: %d\n", type );
+#ifdef CRASH_ON_TYPE_ERRORS
+			tmpLogLevel = 0;
+#endif // CRASH_ON_TYPE_ERRORS
+			log_f( tmpLogLevel, "CheckEvalStackItemType() FAILED-2: type not valid: %d\n", type );
 			error = 1;
 		}
 
 		log_f( 3, "CheckEvalStackItemType() stage-2 : typeInfo=%d type=%d size=%d at offsetB=%d\n", typeInfo, type, size, offsetB );
 
 		if ( opSize != size ) {
-			log_f( 0, "CheckEvalStackItemType() FAILED at stage-2 : %d vs %d\n", opSize, size );
+#ifdef CRASH_ON_TYPE_ERRORS
+			tmpLogLevel = 0;
+#endif // CRASH_ON_TYPE_ERRORS
+			log_f( tmpLogLevel, "CheckEvalStackItemType() FAILED at stage-2 : %d vs %d\n", opSize, size );
 			error = 1;
 		}
 	}
@@ -3194,7 +3202,7 @@ JIT_CONV_R64_U32_end:
 JIT_CONV_R64_I64_start:
 	OPCODE_USE(JIT_CONV_R64_I64);
 	{
-		float value = POP_FLOAT();
+		double value = POP_DOUBLE();
 		PUSH_U64((I64)value);
 	}
 JIT_CONV_R64_I64_end:

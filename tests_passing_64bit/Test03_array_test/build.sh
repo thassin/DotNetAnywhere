@@ -1,6 +1,6 @@
 #! /bin/bash
 
-TESTNAME="Test08_box_unbox"
+TESTNAME="Test03_array_test"
 
 CORLIBDLL="../../tests_BIN/corlib.dll"
 TESTDIR="../../tests_BIN"

@@ -1,10 +1,10 @@
 ﻿using System;
 
-namespace Test08 {
+namespace Test09 {
 
     public class Program {
 
-        private const string TESTCASE = "TESTCASE08 : ";
+        private const string TESTCASE = "TESTCASE09 : ";
 
         private const string TEST_PASSED = "test_passed";
         private const string TEST_FAILED = "test_FAILED";

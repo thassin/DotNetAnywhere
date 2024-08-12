@@ -1,17 +1,18 @@
 ﻿using System;
 ﻿using System.Collections.Generic;
 using System.Linq;
+using RNGen;
 
-namespace Test07 {
+namespace Test08 {
 
     public class Program {
 
-        private const string TESTCASE = "TESTCASE07 : ";
+        private const string TESTCASE = "TESTCASE08 : ";
 
         private const string TEST_PASSED = "test_passed";
         private const string TEST_FAILED = "test_FAILED";
 
-        private static Random rnd;
+        private static RandomNumberGenerator rnd;
 
         static void Main(string[] args) {
             Console.WriteLine( TESTCASE + "test garbage-collection." );
@@ -26,7 +27,7 @@ namespace Test07 {
             }
 
             Console.WriteLine( TESTCASE + "using randomSeed__ = " + randomSeed );
-            rnd = new Random( randomSeed );
+            rnd = new RandomNumberGenerator( randomSeed );
 
             int count = 5;		// tämä OK, alkuperäinen testi. molemmat ok.
             int increment = 1;

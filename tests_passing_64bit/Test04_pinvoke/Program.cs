@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace Test03 {
+namespace Test04 {
 
     public class Program {
 
-        private const string TESTCASE = "TESTCASE03 : ";
+        private const string TESTCASE = "TESTCASE04 : ";
 
         private const string TEST_PASSED = "test_passed";
         private const string TEST_FAILED = "test_FAILED";
