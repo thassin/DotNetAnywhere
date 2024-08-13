@@ -427,6 +427,9 @@ tJITOpCodeName __names[] = {
 	{ JIT_BRANCH64_FALSE, "JIT_BRANCH64_FALSE" },
 	{ JIT_BRANCH64_TRUE, "JIT_BRANCH64_TRUE" },
 
+	{ JIT_NEG_F32, "JIT_NEG_F32" },
+	{ JIT_NEG_F64, "JIT_NEG_F64" },
+
 	{ -1, "" } // an end mark.
 };
 

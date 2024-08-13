@@ -107,7 +107,10 @@ namespace Test09 {
 
 	static void Test3( object o ) {
             test_count++;
+            
 	    //float f = (long)o; // 20240809 noticed a bug/typo here, which DNA runtime does not check.
+	    // => TODO no such check is implemented, should throw an exception in this case.
+	    
 	    float f = (float)o;
             Console.WriteLine( "float-value = " + f );
             if ( f == 2.5f ) ok_count++;

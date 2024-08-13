@@ -905,10 +905,10 @@ cilBinaryArithOp:
 				pTypeA = PopStackType();
 				if (pTypeA->stackType == EVALSTACK_INT32 && pTypeB->stackType == EVALSTACK_INT32) {
 					PushOp(JIT_ADD_I32I32 + (op - CIL_ADD) - u32Value);
-					PushStackType(types[TYPE_SYSTEM_INT32]);
+					PushStackType(pTypeA);
 				} else if (pTypeA->stackType == EVALSTACK_INT64 && pTypeB->stackType == EVALSTACK_INT64) {
 					PushOp(JIT_ADD_I64I64 + (op - CIL_ADD) - u32Value);
-					PushStackType(types[TYPE_SYSTEM_INT64]);
+					PushStackType(pTypeA);
 				} else if (pTypeA->stackType == EVALSTACK_F32 && pTypeB->stackType == EVALSTACK_F32) {
 					PushOp(JIT_ADD_F32F32 + (op - CIL_ADD) - u32Value);
 					PushStackType(pTypeA);
@@ -925,10 +925,16 @@ cilBinaryArithOp:
 				pTypeA = PopStackType();
 				if (pTypeA->stackType == EVALSTACK_INT32) {
 					PushOp(JIT_NEG_I32 + (op - CIL_NEG));
-					PushStackType(types[TYPE_SYSTEM_INT32]);
+					PushStackType(pTypeA);
 				} else if (pTypeA->stackType == EVALSTACK_INT64) {
 					PushOp(JIT_NEG_I64 + (op - CIL_NEG));
-					PushStackType(types[TYPE_SYSTEM_INT64]);
+					PushStackType(pTypeA);
+				} else if (pTypeA->stackType == EVALSTACK_F32) {
+					PushOp(JIT_NEG_F32 + (op - CIL_NEG));
+					PushStackType(pTypeA);
+				} else if (pTypeA->stackType == EVALSTACK_F64) {
+					PushOp(JIT_NEG_F64 + (op - CIL_NEG));
+					PushStackType(pTypeA);
 				} else {
 					Crash("JITit(): Cannot perform unary operand on stack types: %d", pTypeA->stackType);
 				}
