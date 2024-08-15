@@ -35,6 +35,9 @@ $allTests[] = "Test06_random_test";
 $allTests[] = "Test07_methodcalls_test";
 $allTests[] = "Test08_gc_test";
 $allTests[] = "Test09_box_unbox";
+$allTests[] = "Test10_casts_conversions";
+$allTests[] = "Test11_switch_case";
+$allTests[] = "Test12_delegates_events";
 
 // TODO add more tests here.
 // TODO add more tests here..

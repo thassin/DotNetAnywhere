@@ -379,8 +379,7 @@ void MetaData_Fill_TypeDef_(tMD_TypeDef *pTypeDef, tMD_TypeDef **ppClassTypeArgs
 	if ( pFieldDef->pType->pParent != NULL ) {
 		if ( !strcmp( pFieldDef->pType->pParent->nameSpace, "System" ) && !strcmp( pFieldDef->pType->pParent->name, "MulticastDelegate" ) ) {
 			isDelegate = 1;
-			log_f(0, "found delegate :: fieldName %s type %s.%s\n", pFieldDef->name, pFieldDef->pType->nameSpace, pFieldDef->pType->name);
-			log_f(0, "delegate-tarkastus-2 :: parent %s.%s\n", pFieldDef->pType->pParent->nameSpace, pFieldDef->pType->pParent->name);
+			//log_f(0, "found delegate :: fieldName %s type %s.%s\n", pFieldDef->name, pFieldDef->pType->nameSpace, pFieldDef->pType->name);
 		}
 	}
 
