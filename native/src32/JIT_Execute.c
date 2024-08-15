@@ -1014,6 +1014,7 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 		GET_LABELS(JIT_BOX_INTNATIVE);
 		GET_LABELS(JIT_BOX_F32);
 		GET_LABELS(JIT_BOX_F64);
+		GET_LABELS(JIT_BOX_PTR);
 		GET_LABELS(JIT_BOX_O);
 		GET_LABELS(JIT_BOX_VALUETYPE);
 
@@ -1671,7 +1672,7 @@ JIT_CALL_NATIVE_start:
 			// Save the method state
 			SAVE_METHOD_STATE();
 			// Change the IP pointer to point to the return instruction
-			pCurrentMethodState->ipOffset = 3;
+			pCurrentMethodState->ipOffset = 3; // 32bit
 			// Handle special async codes
 			if (pAsync == ASYNC_LOCK_EXIT) {
 				return THREAD_STATUS_LOCK_EXIT;
@@ -3818,12 +3819,14 @@ JIT_BOX_VALUETYPE_start:
 JIT_BOX_VALUETYPE_end:
 	GO_NEXT();
 
+JIT_BOX_PTR_start:
 JIT_BOX_O_start:
 	pCurOp++; // 32bit
 	// Fall-through
 JIT_UNBOX2OBJECT_start: // TODO: This is not correct - it should check the type, just like CAST_CLASS
 	OPCODE_USE(JIT_UNBOX2OBJECT);
 	// Nothing to do
+JIT_BOX_PTR_end:
 JIT_BOX_O_end:
 JIT_UNBOX2OBJECT_end:
 	GO_NEXT();

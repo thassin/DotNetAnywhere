@@ -296,7 +296,7 @@ void Thread_GetHeapRoots(tHeapRoots *pHeapRoots) {
 			// Put the evaluation stack on the roots
 			Heap_SetRoots(pHeapRoots, pMethodState->pEvalStack, pMethodState->pEvalStackTypeInfo, pMethodState->pMethod->pJITted->maxStack, 11);
 
-			//JIT_PrintEvalStackDump( pMethodState, pMethodState->pMethod->pJITted->maxStack, 10000 + __LINE__, 0 );
+		//	JIT_PrintEvalStackDump( pMethodState, pMethodState->pMethod->pJITted->maxStack, 1000000 + __LINE__, 0 );
 
 			// Put the params/locals on the roots
 			Heap_SetRoots(pHeapRoots, pMethodState->pParamsLocals, pMethodState->pParamsLocalsTypeInfo,

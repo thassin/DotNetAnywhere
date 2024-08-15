@@ -356,6 +356,7 @@ void MetaData_Fill_TypeDef_(tMD_TypeDef *pTypeDef, tMD_TypeDef **ppClassTypeArgs
 
 			int refTypeCount = 0;
 			int valTypeCount = 0;
+			//int otherCount = 0; not really needed...
 
 			for (i = 0; i<pTypeDef->numFields; i++) {
 				tMD_FieldDef *pFieldDef;
@@ -371,12 +372,28 @@ void MetaData_Fill_TypeDef_(tMD_TypeDef *pTypeDef, tMD_TypeDef **ppClassTypeArgs
 					if ( pFieldDef->pType->isValueType ) isValueType += 1;
 
 					if ( isValueType == 0 ) {
-						// is reference-type
-						refTypeCount++;
-						// make sure that reference-types are FIRST.
-						if ( valTypeCount != 0 ) {
-							// if this happens, please fix the static fields order in your C# code and re-compile.
-							Crash( "ERROR in static fields: define refTypes before valTypes. %s.%s", pTypeDef->nameSpace, pTypeDef->name );
+
+	// detect delegates here, and do not count them in heap-allocated-reference-types.
+
+	int isDelegate = 0;
+	if ( pFieldDef->pType->pParent != NULL ) {
+		if ( !strcmp( pFieldDef->pType->pParent->nameSpace, "System" ) && !strcmp( pFieldDef->pType->pParent->name, "MulticastDelegate" ) ) {
+			isDelegate = 1;
+			log_f(0, "found delegate :: fieldName %s type %s.%s\n", pFieldDef->name, pFieldDef->pType->nameSpace, pFieldDef->pType->name);
+			log_f(0, "delegate-tarkastus-2 :: parent %s.%s\n", pFieldDef->pType->pParent->nameSpace, pFieldDef->pType->pParent->name);
+		}
+	}
+
+						if ( isDelegate ) {
+							//otherCount++;
+						} else {
+							// is reference-type
+							refTypeCount++;
+							// make sure that reference-types are FIRST.
+							if ( valTypeCount != 0 ) {
+								// if this happens, please fix the static fields order in your C# code and re-compile.
+								Crash( "ERROR in static fields: define refTypes before valTypes. %s.%s", pTypeDef->nameSpace, pTypeDef->name );
+							}
 						}
 					} else {
 						// is value-type

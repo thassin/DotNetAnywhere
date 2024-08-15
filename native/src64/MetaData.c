@@ -470,6 +470,14 @@ static int table_18_fieldInfo[] = {
 	FIELDINFO_END
 };
 
+static int table_20_fieldInfo[] = {
+	offsetof( struct tMD_Event_, eventFlags ), 0,
+	offsetof( struct tMD_Event_, padding0 ), 0,
+	offsetof( struct tMD_Event_, name ), 1,
+	offsetof( struct tMD_Event_, eventType ), 0,
+	FIELDINFO_END
+};
+
 static int table_21_fieldInfo[] = {
 	offsetof( struct tMD_PropertyMap_, parent ), 0,
 	offsetof( struct tMD_PropertyMap_, propertyList ), 0,
@@ -649,8 +657,8 @@ switch ( tableID ) {
 	case 14:	expectedSize = 16; break;
 	case 15:	expectedSize = 12; break;
 	case 17:	expectedSize = 8; break;
-	case 18:	expectedSize = -1; break;
-	case 20:	expectedSize = -1; break;
+	case 18:	expectedSize = 8; break;
+	case 20:	expectedSize = 24; break;
 	case 21:	expectedSize = 8; break;
 	case 23:	expectedSize = 24; break;
 	case 24:	expectedSize = 12; break;
@@ -692,6 +700,7 @@ switch ( tableID ) {
 	case 15:	fieldInfo = table_15_fieldInfo; break;
 	case 17:	fieldInfo = table_17_fieldInfo; break;
 	case 18:	fieldInfo = table_18_fieldInfo; break;
+	case 20:	fieldInfo = table_20_fieldInfo; break;
 	case 21:	fieldInfo = table_21_fieldInfo; break;
 	case 23:	fieldInfo = table_23_fieldInfo; break;
 	case 24:	fieldInfo = table_24_fieldInfo; break;
@@ -918,6 +927,7 @@ if ( tableID == 4 ) paddingBytes = 8;
 if ( tableID == 6 ) paddingBytes = 16;
 if ( tableID == 8 ) paddingBytes = 4;
 if ( tableID == 10 ) paddingBytes = 4;
+if ( tableID == 20 ) paddingBytes = 8;
 if ( tableID == 23 ) paddingBytes = 4;
 if ( tableID == 28 ) paddingBytes = 4;
 if ( tableID == 29 ) paddingBytes = 4;
