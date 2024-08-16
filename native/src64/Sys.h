@@ -43,6 +43,10 @@ void* mallocTrace(int s, char *pFile, int line);
 
 #define INTERNALCALL_PARAM(ofs, type) *(type*)(pParams + ofs)
 
+#define INTERNALCALL_GET_SAFE_PARAM(variable, type) \
+	INTERNALCALL_PARAM(variable, type); \
+	variable += sizeof(type)
+
 #include "MetaData.h"
 
 void Crash(char *pMsg, ...);
