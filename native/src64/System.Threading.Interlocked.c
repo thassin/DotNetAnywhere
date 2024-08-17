@@ -24,8 +24,7 @@
 #include "System.Threading.Interlocked.h"
 
 tAsyncCall* System_Threading_Interlocked_CompareExchange_Int32(PTR pThis_, PTR pParams, PTR pReturnValue) {
-	U32 ppos = 0;
-
+	U32 ppos = 0; // need to get multiple parameters => safe 32/64 bit offsets needed.
 	U32 *pLoc = INTERNALCALL_GET_SAFE_PARAM(ppos, U32*);
 	U32 value = INTERNALCALL_GET_SAFE_PARAM(ppos, U32);
 	U32 comparand = INTERNALCALL_GET_SAFE_PARAM(ppos, U32);
@@ -57,8 +56,7 @@ tAsyncCall* System_Threading_Interlocked_Decrement_Int32(PTR pThis_, PTR pParams
 }
 
 tAsyncCall* System_Threading_Interlocked_Add_Int32(PTR pThis_, PTR pParams, PTR pReturnValue) {
-	U32 ppos = 0;
-
+	U32 ppos = 0; // need to get multiple parameters => safe 32/64 bit offsets needed.
 	U32 *pLoc = INTERNALCALL_GET_SAFE_PARAM(ppos, U32*);
 	U32 value = INTERNALCALL_GET_SAFE_PARAM(ppos, U32);
 
@@ -69,8 +67,7 @@ tAsyncCall* System_Threading_Interlocked_Add_Int32(PTR pThis_, PTR pParams, PTR 
 }
 
 tAsyncCall* System_Threading_Interlocked_Exchange_Int32(PTR pThis_, PTR pParams, PTR pReturnValue) {
-	U32 ppos = 0;
-
+	U32 ppos = 0; // need to get multiple parameters => safe 32/64 bit offsets needed.
 	U32 *pLoc = INTERNALCALL_GET_SAFE_PARAM(ppos, U32*);
 	U32 value = INTERNALCALL_GET_SAFE_PARAM(ppos, U32);
 

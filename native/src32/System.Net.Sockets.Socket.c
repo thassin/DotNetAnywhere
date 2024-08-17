@@ -48,10 +48,11 @@ tAsyncCall* System_Net_Sockets_Internal_CreateSocket(PTR pThis_, PTR pParams, PT
 
 	int s;
 
-	U32 family = INTERNALCALL_PARAM(0, U32);
-	U32 type = INTERNALCALL_PARAM(4, U32);
-	U32 proto = INTERNALCALL_PARAM(8, U32);
-	U32 *pError = INTERNALCALL_PARAM(12, U32*);
+	U32 ppos = 0; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	U32 family = INTERNALCALL_GET_SAFE_PARAM(ppos, U32);
+	U32 type = INTERNALCALL_GET_SAFE_PARAM(ppos, U32);
+	U32 proto = INTERNALCALL_GET_SAFE_PARAM(ppos, U32);
+	U32 *pError = INTERNALCALL_GET_SAFE_PARAM(ppos, U32*);
 
 	*(void**)pReturnValue = NULL;
 
@@ -85,10 +86,11 @@ tAsyncCall* System_Net_Sockets_Internal_Bind(PTR pThis_, PTR pParams, PTR pRetur
 	struct sockaddr_in sa;
 	int r;
 
-	int s = INTERNALCALL_PARAM(0, int);
-	U32 addr = INTERNALCALL_PARAM(4, U32);
-	U32 port = INTERNALCALL_PARAM(8, U32);
-	U32 *pError = INTERNALCALL_PARAM(12, U32*);
+	U32 ppos = 0; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	int s = INTERNALCALL_GET_SAFE_PARAM(ppos, int);
+	U32 addr = INTERNALCALL_GET_SAFE_PARAM(ppos, U32);
+	U32 port = INTERNALCALL_GET_SAFE_PARAM(ppos, U32);
+	U32 *pError = INTERNALCALL_GET_SAFE_PARAM(ppos, U32*);
 
 	sa.sin_family = AF_INET;
 #ifdef _WIN32
@@ -118,9 +120,10 @@ tAsyncCall* System_Net_Sockets_Internal_Close(PTR pThis_, PTR pParams, PTR pRetu
 }
 
 tAsyncCall* System_Net_Sockets_Internal_Listen(PTR pThis_, PTR pParams, PTR pReturnValue) {
-	int s = INTERNALCALL_PARAM(0, int);
-	U32 backlog = INTERNALCALL_PARAM(4, U32);
-	U32 *pError = INTERNALCALL_PARAM(8, U32*);
+	U32 ppos = 0; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	int s = INTERNALCALL_GET_SAFE_PARAM(ppos, int);
+	U32 backlog = INTERNALCALL_GET_SAFE_PARAM(ppos, U32);
+	U32 *pError = INTERNALCALL_GET_SAFE_PARAM(ppos, U32*);
 
 	int r = listen(s, backlog);
 
@@ -130,8 +133,9 @@ tAsyncCall* System_Net_Sockets_Internal_Listen(PTR pThis_, PTR pParams, PTR pRet
 }
 
 static U32 Accept_Check(PTR pThis_, PTR pParams, PTR pReturnValue, tAsyncCall *pAsync) {
-	int s = INTERNALCALL_PARAM(0, int);
-	U32 *pError = INTERNALCALL_PARAM(4, U32*);
+	U32 ppos = 0; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	int s = INTERNALCALL_GET_SAFE_PARAM(ppos, int);
+	U32 *pError = INTERNALCALL_GET_SAFE_PARAM(ppos, U32*);
 	int newS;
 
 	newS = (int)accept(s, NULL, 0);
@@ -169,10 +173,11 @@ static U32 Connect_Check(PTR pThis_, PTR pParams, PTR pReturnValue, tAsyncCall *
 	struct sockaddr_in sa;
 	int r;
 
-	int s = INTERNALCALL_PARAM(0, int);
-	U32 addr = INTERNALCALL_PARAM(4, U32);
-	U32 port = INTERNALCALL_PARAM(8, U32);
-	U32 *pError = INTERNALCALL_PARAM(12, U32*);
+	U32 ppos = 0; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	int s = INTERNALCALL_GET_SAFE_PARAM(ppos, int);
+	U32 addr = INTERNALCALL_GET_SAFE_PARAM(ppos, U32);
+	U32 port = INTERNALCALL_GET_SAFE_PARAM(ppos, U32);
+	U32 *pError = INTERNALCALL_GET_SAFE_PARAM(ppos, U32*);
 
 	sa.sin_family = AF_INET;
 #ifdef _WIN32
@@ -237,12 +242,13 @@ static U32 Receive_Check(PTR pThis_, PTR pParams, PTR pReturnValue, tAsyncCall *
 	int r;
 	tSendRecvState *pState = (tSendRecvState*)pAsync->state;
 
-	int s = INTERNALCALL_PARAM(0, int);
-	HEAP_PTR bufferArray = INTERNALCALL_PARAM(4, HEAP_PTR);
-	U32 ofs = INTERNALCALL_PARAM(8, U32);
-	U32 size = INTERNALCALL_PARAM(12, U32);
-	U32 flags = INTERNALCALL_PARAM(16, U32);
-	U32 *pError = INTERNALCALL_PARAM(20, U32*);
+	U32 ppos = 0; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	int s = INTERNALCALL_GET_SAFE_PARAM(ppos, int);
+	HEAP_PTR bufferArray = INTERNALCALL_GET_SAFE_PARAM(ppos, HEAP_PTR);
+	U32 ofs = INTERNALCALL_GET_SAFE_PARAM(ppos, U32);
+	U32 size = INTERNALCALL_GET_SAFE_PARAM(ppos, U32);
+	U32 flags = INTERNALCALL_GET_SAFE_PARAM(ppos, U32);
+	U32 *pError = INTERNALCALL_GET_SAFE_PARAM(ppos, U32*);
 
 	buffer = SystemArray_GetElements(bufferArray) + ofs + pState->count;
 
@@ -305,12 +311,13 @@ static U32 Send_Check(PTR pThis_, PTR pParams, PTR pReturnValue, tAsyncCall *pAs
 	int r;
 	tSendRecvState *pState = (tSendRecvState*)pAsync->state;
 
-	int s = INTERNALCALL_PARAM(0, int);
-	HEAP_PTR bufferArray = INTERNALCALL_PARAM(4, HEAP_PTR);
-	U32 ofs = INTERNALCALL_PARAM(8, U32);
-	U32 size = INTERNALCALL_PARAM(12, U32);
-	U32 flags = INTERNALCALL_PARAM(16, U32);
-	U32 *pError = INTERNALCALL_PARAM(20, U32*);
+	U32 ppos = 0; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	int s = INTERNALCALL_GET_SAFE_PARAM(ppos, int);
+	HEAP_PTR bufferArray = INTERNALCALL_GET_SAFE_PARAM(ppos, HEAP_PTR);
+	U32 ofs = INTERNALCALL_GET_SAFE_PARAM(ppos, U32);
+	U32 size = INTERNALCALL_GET_SAFE_PARAM(ppos, U32);
+	U32 flags = INTERNALCALL_GET_SAFE_PARAM(ppos, U32);
+	U32 *pError = INTERNALCALL_GET_SAFE_PARAM(ppos, U32*);
 
 	buffer = SystemArray_GetElements(bufferArray) + ofs + pState->count;
 

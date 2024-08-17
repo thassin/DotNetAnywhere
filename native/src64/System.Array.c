@@ -241,9 +241,10 @@ tAsyncCall* System_Array_Reverse(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tMD_TypeDef *pArrayType;
 	U8 *pE1, *pE2;
 
-	pArray = INTERNALCALL_PARAM(0, tSystemArray*);
-	index = INTERNALCALL_PARAM(4, U32);
-	length = INTERNALCALL_PARAM(8, U32);
+	U32 ppos = 0; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	pArray = INTERNALCALL_GET_SAFE_PARAM(ppos, tSystemArray*);
+	index = INTERNALCALL_GET_SAFE_PARAM(ppos, U32);
+	length = INTERNALCALL_GET_SAFE_PARAM(ppos, U32);
 
 	pArrayType = Heap_GetType((HEAP_PTR)pArray);
 	elementSize = pArrayType->pArrayElementType->arrayElementSize;
@@ -348,9 +349,11 @@ U32 SystemArray_GetNumBytes(HEAP_PTR pThis_, tMD_TypeDef *pElementType) {
 }
 
 tAsyncCall* System_Array_CreateInstance(PTR pThis_, PTR pParams, PTR pReturnValue) {
-	tMD_TypeDef *pElementType = RuntimeType_DeRef((PTR)(INTERNALCALL_PARAM(0, tRuntimeType*)));
+	U32 ppos = 0; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	PTR tmpType = (PTR)INTERNALCALL_GET_SAFE_PARAM(ppos, tRuntimeType*);
+	tMD_TypeDef *pElementType = RuntimeType_DeRef(tmpType);
 	tMD_TypeDef *pArrayType = Type_GetArrayTypeDef(pElementType, NULL, NULL);
-	U32 length = INTERNALCALL_PARAM(4, U32);
+	U32 length = INTERNALCALL_GET_SAFE_PARAM(ppos, U32);
 	*(HEAP_PTR*)pReturnValue = SystemArray_NewVector(pArrayType, length);
 	return NULL;
 }

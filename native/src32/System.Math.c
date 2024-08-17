@@ -44,7 +44,10 @@ tAsyncCall* System_Math_Tan(PTR pThis_, PTR pParams, PTR pReturnValue) {
 }
 
 tAsyncCall* System_Math_Pow(PTR pThis_, PTR pParams, PTR pReturnValue) {
-	*(double*)pReturnValue = pow(INTERNALCALL_PARAM(0, double), INTERNALCALL_PARAM(8, double));
+	U32 ppos = 0; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	double tmpBase = INTERNALCALL_GET_SAFE_PARAM(ppos, double);
+	double tmpExponent = INTERNALCALL_GET_SAFE_PARAM(ppos, double);
+	*(double*)pReturnValue = pow(tmpBase, tmpExponent);
 
 	return NULL;
 }
