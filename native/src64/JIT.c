@@ -1199,11 +1199,11 @@ conv2:
 					u32Value = GetUnalignedU32(pCIL, &cilOfs);
 					pTypeDef = MetaData_GetTypeDefFromDefRefOrSpec(pMethodDef->pMetaData, u32Value, pMethodDef->pParentType->ppClassTypeArgs, pMethodDef->ppMethodTypeArgs);
 					PopStackTypeMulti(2);
-					if (pTypeDef->isValueType && pTypeDef->arrayElementSize != 4) {
+					if (pTypeDef->isValueType && pTypeDef->arrayElementSize != 8) { // 64bit
 						// If it's a value-type then do this
 						PushOpParam(JIT_STORE_OBJECT_VALUETYPE, pTypeDef->arrayElementSize);
 					} else {
-						// If it's a ref type, or a value-type with size 4, then can do this instead
+						// If it's a ref type, or a value-type with size 8, then can do this instead
 						// (it executes faster)
 						PushOp(JIT_STOREINDIRECT_REF);
 					}

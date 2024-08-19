@@ -36,9 +36,9 @@ tAsyncCall* System_Runtime_CompilerServices_InitializeArray(PTR pThis_, PTR pPar
 	PTR pElements;
 	U32 arrayLength;
 
-	PTR pParams[2];
-	pParams[0] = pParamsIn;
-	pParams[1] = pParams[0] + sizeof(void*);
+	PTR pParams[2]; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	pParams[0] = pParamsIn;				// p0 type is HEAP_PTR
+	pParams[1] = pParams[0] + sizeof(void*);	// p1 type is PTR
 
 	pArray = *(HEAP_PTR*)pParams[0];
 	pRawData = *(PTR*)pParams[1];

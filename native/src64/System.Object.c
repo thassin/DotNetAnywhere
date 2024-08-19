@@ -27,7 +27,7 @@
 #include "Type.h"
 
 tAsyncCall* System_Object_Equals(PTR pThis_, PTR pParams, PTR pReturnValue) {
-	*(U32*)pReturnValue = (pThis_ == *(PTR*)pParams);
+	*(U32*)pReturnValue = (pThis_ == *(PTR*)pParams); // just use the first parameter.
 
 	return NULL;
 }
@@ -35,7 +35,7 @@ tAsyncCall* System_Object_Equals(PTR pThis_, PTR pParams, PTR pReturnValue) {
 tAsyncCall* System_Object_Clone(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	HEAP_PTR obj, clone;
 
-	obj = ((HEAP_PTR*)pParams)[0];
+	obj = *(HEAP_PTR*)pParams; // just use the first parameter.
 	clone = Heap_Clone(obj);
 	*(HEAP_PTR*)pReturnValue = clone;
 

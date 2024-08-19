@@ -1169,7 +1169,7 @@ conv2:
 					u32Value = GetUnalignedU32(pCIL, &cilOfs);
 					pTypeDef = MetaData_GetTypeDefFromDefRefOrSpec(pMethodDef->pMetaData, u32Value, pMethodDef->pParentType->ppClassTypeArgs, pMethodDef->ppMethodTypeArgs);
 					PopStackTypeMulti(2);
-					if (pTypeDef->isValueType && pTypeDef->arrayElementSize != 4) {
+					if (pTypeDef->isValueType && pTypeDef->arrayElementSize != 4) { // 32bit
 						// If it's a value-type then do this
 						PushOpParam(JIT_STORE_OBJECT_VALUETYPE, pTypeDef->arrayElementSize);
 					} else {

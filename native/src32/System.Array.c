@@ -45,7 +45,7 @@ tAsyncCall* System_Array_Internal_GetValue(PTR pThis_, PTR pParams, PTR pReturnV
 	tMD_TypeDef *pElementType;
 	PTR pElement;
 
-	index = *(U32*)pParams;
+	index = *(U32*)pParams; // just use the first parameter.
 	pArrayType = Heap_GetType(pThis_);
 	pElementType = pArrayType->pArrayElementType;
 	elementSize = pElementType->arrayElementSize;
@@ -86,9 +86,9 @@ tAsyncCall* System_Array_Internal_SetValue(PTR pThis_, PTR pParamsIn, PTR pRetur
 	tMD_TypeDef *pElementType;
 	PTR pElement;
 
-	PTR pParams[2];
-	pParams[0] = pParamsIn;
-	pParams[1] = pParams[0] + sizeof(void*);
+	PTR pParams[2]; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	pParams[0] = pParamsIn;				// p0 type is HEAP_PTR
+	pParams[1] = pParams[0] + sizeof(void*);	// p1 type is U32
 
 	pArrayType = Heap_GetType(pThis_);
 	obj = *(HEAP_PTR*)pParams[0];
@@ -142,10 +142,10 @@ tAsyncCall* System_Array_Clear(PTR pThis_, PTR pParamsIn, PTR pReturnValue) {
 	U32 index, length, elementSize;
 	tMD_TypeDef *pArrayType;
 
-	PTR pParams[3];
-	pParams[0] = pParamsIn;
-	pParams[1] = pParams[0] + sizeof(void*);
-	pParams[2] = pParams[1] + sizeof(U32);
+	PTR pParams[3]; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	pParams[0] = pParamsIn;				// p0 type is tSystemArray*
+	pParams[1] = pParams[0] + sizeof(void*);	// p1 type is U32
+	pParams[2] = pParams[1] + sizeof(U32);		// p2 type is U32
 
 	pArray = *(tSystemArray**)pParams[0];
 	index = *(U32*)pParams[1];
@@ -161,12 +161,12 @@ tAsyncCall* System_Array_Internal_Copy(PTR pThis_, PTR pParamsIn, PTR pReturnVal
 	tSystemArray *pSrc, *pDst;
 	tMD_TypeDef *pSrcType, *pDstType, *pSrcElementType;
 
-	PTR pParams[5];
-	pParams[0] = pParamsIn;
-	pParams[1] = pParams[0] + sizeof(void*);
-	pParams[2] = pParams[1] + sizeof(U32);
-	pParams[3] = pParams[2] + sizeof(void*);
-	pParams[4] = pParams[3] + sizeof(U32);
+	PTR pParams[5]; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	pParams[0] = pParamsIn;				// p0 type is tSystemArray*
+	pParams[1] = pParams[0] + sizeof(void*);	// p1 type is U32
+	pParams[2] = pParams[1] + sizeof(U32);		// p2 type is tSystemArray*
+	pParams[3] = pParams[2] + sizeof(void*);	// p3 type is U32
+	pParams[4] = pParams[3] + sizeof(U32);		// p4 type is U32
 
 	pSrc = *(tSystemArray**)pParams[0];
 	pDst = *(tSystemArray**)pParams[2];
@@ -210,9 +210,9 @@ tAsyncCall* System_Array_Resize(PTR pThis_, PTR pParamsIn, PTR pReturnValue) {
 	U32 newSize, oldSize;
 	tMD_TypeDef *pArrayTypeDef;
 
-	PTR pParams[2];
-	pParams[0] = pParamsIn;
-	pParams[1] = pParams[0] + sizeof(void*);
+	PTR pParams[2]; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	pParams[0] = pParamsIn;				// p0 type is HEAP_PTR*
+	pParams[1] = pParams[0] + sizeof(void*);	// p1 type is U32
 
 	ppArray_ = *(HEAP_PTR**)pParams[0];
 	newSize = *(U32*)pParams[1];

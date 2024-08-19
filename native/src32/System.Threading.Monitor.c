@@ -26,9 +26,14 @@
 #include "Type.h"
 #include "Types.h"
 
-static U32 Internal_TryEntry_Check(PTR pThis_, PTR pParams, PTR pReturnValue, tAsyncCall *pAsync) {
-	HEAP_PTR pObj = ((HEAP_PTR*)pParams)[0];
-	I32 timeout = ((I32*)pParams)[1];
+static U32 Internal_TryEntry_Check(PTR pThis_, PTR pParamsIn, PTR pReturnValue, tAsyncCall *pAsync) {
+
+	PTR pParams[2]; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	pParams[0] = pParamsIn;				// p0 type is HEAP_PTR
+	pParams[1] = pParams[0] + sizeof(void*);	// p1 type is I32
+
+	HEAP_PTR pObj = *(HEAP_PTR*)pParams[0];
+	I32 timeout = *(I32*)pParams[1];
 	U32 ret = Heap_SyncTryEnter(pObj);
 	U64 now;
 	if (ret) {
@@ -75,7 +80,7 @@ tAsyncCall* System_Threading_Monitor_Internal_TryEnter(PTR pThis_, PTR pParams, 
 }
 
 tAsyncCall* System_Threading_Monitor_Internal_Exit(PTR pThis_, PTR pParams, PTR pReturnValue) {
-	HEAP_PTR pObj = ((HEAP_PTR*)pParams)[0];
+	HEAP_PTR pObj = *(HEAP_PTR*)pParams; // just use the first parameter.
 	Heap_SyncExit(pObj);
 	return ASYNC_LOCK_EXIT;
 }

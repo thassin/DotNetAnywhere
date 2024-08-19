@@ -39,6 +39,8 @@ $allTests[] = "Test10_casts_conversions";
 $allTests[] = "Test11_switch_case";
 $allTests[] = "Test12_delegates_events";
 $allTests[] = "Test13_yield_test";
+$allTests[] = "Test14_linq";
+$allTests[] = "Test15_collections";
 
 // TODO add more tests here.
 // TODO add more tests here..

@@ -33,7 +33,7 @@
 #include "CLIFile.h"
 
 tAsyncCall* System_Type_GetTypeFromHandle(PTR pThis_, PTR pParams, PTR pReturnValue) {
-	tMD_TypeDef *pTypeDef = *(tMD_TypeDef**)pParams;
+	tMD_TypeDef *pTypeDef = *(tMD_TypeDef**)pParams; // just use the first parameter.
 
 	*(HEAP_PTR*)pReturnValue = Type_GetTypeObject(pTypeDef);
 
@@ -64,20 +64,24 @@ void DotNetStringToCString(unsigned char* buf, U32 bufLength, STRING dotnetStrin
 
 tAsyncCall* System_Type_EnsureAssemblyLoaded(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	unsigned char assemblyName[256];
-	DotNetStringToCString(assemblyName, 256, ((HEAP_PTR*)pParams)[0]);
+	DotNetStringToCString(assemblyName, 256, *(HEAP_PTR*)pParams); // just use the first parameter.
 	CLIFile_GetMetaDataForAssembly(assemblyName);
 
 	*(HEAP_PTR*)pReturnValue = NULL;
 	return NULL;
 }
 
-tAsyncCall* System_Type_GetTypeFromName(PTR pThis_, PTR pParams, PTR pReturnValue) {
+tAsyncCall* System_Type_GetTypeFromName(PTR pThis_, PTR pParamsIn, PTR pReturnValue) {
 	unsigned char namespaceName[256];
 	unsigned char className[256];
 	tMD_TypeDef *pTypeDef;
 
-	DotNetStringToCString(namespaceName, 256, ((HEAP_PTR*)pParams)[1]);
-	DotNetStringToCString(className, 256, ((HEAP_PTR*)pParams)[2]);
+	PTR pParams[2]; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	pParams[0] = pParamsIn;				// p0 type is HEAP_PTR
+	pParams[1] = pParams[0] + sizeof(void*);	// p1 type is HEAP_PTR
+
+	DotNetStringToCString(namespaceName, 256, *(HEAP_PTR*)pParams[1]);
+	DotNetStringToCString(className, 256, *(HEAP_PTR*)pParams[2]);
 
 	if (((HEAP_PTR*)pParams)[0] == 0) {
 		// assemblyName is null, so search all loaded assemblies
@@ -85,7 +89,7 @@ tAsyncCall* System_Type_GetTypeFromName(PTR pThis_, PTR pParams, PTR pReturnValu
 	} else {
 		// assemblyName is specified
 		unsigned char assemblyName[256];
-		DotNetStringToCString(assemblyName, 256, ((HEAP_PTR*)pParams)[0]);
+		DotNetStringToCString(assemblyName, 256, *(HEAP_PTR*)pParams[0]);
 		tMetaData *pAssemblyMetadata = CLIFile_GetMetaDataForAssembly(assemblyName);
 		pTypeDef = MetaData_GetTypeDefFromName(pAssemblyMetadata, namespaceName, className, NULL, /* assertExists */ 1);
 	}
@@ -162,7 +166,7 @@ tAsyncCall* System_Type_GetMethod(PTR pThis_, PTR pParams, PTR pReturnValue)
 {
 	// Read param
 	unsigned char methodName[256];
-	DotNetStringToCString(methodName, 256, ((HEAP_PTR*)pParams)[0]);
+	DotNetStringToCString(methodName, 256, *(HEAP_PTR*)pParams); // just use the first parameter.
 
 	// Get metadata for the 'this' type
 	tRuntimeType *pRuntimeType = (tRuntimeType*)pThis_;

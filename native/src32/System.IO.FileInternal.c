@@ -42,7 +42,7 @@
 
 #define FILEATTRIBUTES_DIRECTORY 0x00010
 
-tAsyncCall* System_IO_FileInternal_Open(PTR pThis_, PTR pParams, PTR pReturnValue) {
+tAsyncCall* System_IO_FileInternal_Open(PTR pThis_, PTR pParamsIn, PTR pReturnValue) {
 	U32 filenameLen;
 	STRING2 filename2;
 	U32 mode, access, share;
@@ -51,12 +51,19 @@ tAsyncCall* System_IO_FileInternal_Open(PTR pThis_, PTR pParams, PTR pReturnValu
 	U32 i;
 	I32 f = 0;
 	int flags, error = 0;
-	
-	filename2 = SystemString_GetString(((HEAP_PTR*)pParams)[0], &filenameLen);
-	mode = ((U32*)pParams)[1];
-	access = ((U32*)pParams)[2];
-	share = ((U32*)pParams)[3];
-	pError = ((U32**)pParams)[4];
+
+	PTR pParams[5]; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	pParams[0] = pParamsIn;				// p0 type is HEAP_PTR
+	pParams[1] = pParams[0] + sizeof(void*);	// p1 type is U32
+	pParams[2] = pParams[1] + sizeof(U32);		// p2 type is U32
+	pParams[3] = pParams[2] + sizeof(U32);		// p3 type is U32
+	pParams[4] = pParams[3] + sizeof(U32);		// p4 type is U32*
+
+	filename2 = SystemString_GetString(*(HEAP_PTR*)pParams[0], &filenameLen);
+	mode = *(U32*)pParams[1];
+	access = *(U32*)pParams[2];
+	share = *(U32*)pParams[3];
+	pError = *(U32**)pParams[4];
 
 	for (i=0; i<filenameLen; i++) {
 		filename[i] = (unsigned char)filename2[i];
@@ -85,7 +92,7 @@ done:
 	return NULL;
 }
 
-tAsyncCall* System_IO_FileInternal_Read(PTR pThis_, PTR pParams, PTR pReturnValue) {
+tAsyncCall* System_IO_FileInternal_Read(PTR pThis_, PTR pParamsIn, PTR pReturnValue) {
 	U32 f;
 	HEAP_PTR dst;
 	U32 startOfs, count;
@@ -93,11 +100,18 @@ tAsyncCall* System_IO_FileInternal_Read(PTR pThis_, PTR pParams, PTR pReturnValu
 	PTR pFirstElement;
 	I32 ret = 0, error = 0;
 
-	f = ((U32*)pParams)[0];
-	dst = ((HEAP_PTR*)pParams)[1];
-	startOfs = ((U32*)pParams)[2];
-	count = ((U32*)pParams)[3];
-	pError = ((U32**)pParams)[4];
+	PTR pParams[5]; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	pParams[0] = pParamsIn;				// p0 type is U32
+	pParams[1] = pParams[0] + sizeof(U32);		// p1 type is HEAP_PTR
+	pParams[2] = pParams[1] + sizeof(void*);	// p2 type is U32
+	pParams[3] = pParams[2] + sizeof(U32);		// p3 type is U32
+	pParams[4] = pParams[3] + sizeof(U32);		// p4 type is U32*
+
+	f = *(U32*)pParams[0];
+	dst = *(HEAP_PTR*)pParams[1];
+	startOfs = *(U32*)pParams[2];
+	count = *(U32*)pParams[3];
+	pError = *(U32**)pParams[4];
 	pFirstElement = SystemArray_LoadElementAddress(dst, startOfs);
 
 	ret = read(f, pFirstElement, count);
@@ -110,12 +124,16 @@ tAsyncCall* System_IO_FileInternal_Read(PTR pThis_, PTR pParams, PTR pReturnValu
 	return NULL;
 }
 
-tAsyncCall* System_IO_FileInternal_Close(PTR pThis_, PTR pParams, PTR pReturnValue) {
+tAsyncCall* System_IO_FileInternal_Close(PTR pThis_, PTR pParamsIn, PTR pReturnValue) {
 	U32 f;
 	U32 *pError;
 
-	f = ((U32*)pParams)[0];
-	pError = ((U32**)pParams)[1];
+	PTR pParams[2]; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	pParams[0] = pParamsIn;				// p0 type is U32
+	pParams[1] = pParams[0] + sizeof(U32);		// p1 type is U32*
+
+	f = *(U32*)pParams[0];
+	pError = *(U32**)pParams[1];
 
 	close(f);
 
@@ -125,7 +143,7 @@ tAsyncCall* System_IO_FileInternal_Close(PTR pThis_, PTR pParams, PTR pReturnVal
 }
 
 tAsyncCall* System_IO_FileInternal_GetCurrentDirectory(PTR pThis_, PTR pParams, PTR pReturnValue) {
-	U32 *pError = ((U32**)pParams)[0];
+	U32 *pError = *(U32**)pParams; // just use the first parameter.
 	HEAP_PTR curDir;
 #ifdef _WIN32
 	unsigned short dir[256];
@@ -162,9 +180,14 @@ static U32 Attrs(unsigned char *pPath, U32 *pError) {
 }
 #endif
 
-tAsyncCall* System_IO_FileInternal_GetFileAttributes(PTR pThis_, PTR pParams, PTR pReturnValue) {
-	HEAP_PTR pathHeapPtr = ((HEAP_PTR*)pParams)[0];
-	U32 *pError = ((U32**)pParams)[1];
+tAsyncCall* System_IO_FileInternal_GetFileAttributes(PTR pThis_, PTR pParamsIn, PTR pReturnValue) {
+
+	PTR pParams[2]; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	pParams[0] = pParamsIn;				// p0 type is HEAP_PTR
+	pParams[1] = pParams[0] + sizeof(void*);	// p1 type is U32*
+
+	HEAP_PTR pathHeapPtr = *(HEAP_PTR*)pParams[0];
+	U32 *pError = *(U32**)pParams[1];
 	U32 pathLen;
 	STRING2 path = SystemString_GetString(pathHeapPtr, &pathLen);
 	U32 ret;
@@ -190,12 +213,20 @@ tAsyncCall* System_IO_FileInternal_GetFileAttributes(PTR pThis_, PTR pParams, PT
 	return NULL;
 }
 
-tAsyncCall* System_IO_FileInternal_GetFileSystemEntries(PTR pThis_, PTR pParams, PTR pReturnValue) {
-	//HEAP_PTR pathHP = ((HEAP_PTR*)pParams)[0];
-	HEAP_PTR pathPatternHP = ((HEAP_PTR*)pParams)[1];
-	U32 attrs = ((U32*)pParams)[2];
-	U32 mask = ((U32*)pParams)[3];
-	U32* pError = ((U32**)pParams)[4];
+tAsyncCall* System_IO_FileInternal_GetFileSystemEntries(PTR pThis_, PTR pParamsIn, PTR pReturnValue) {
+
+	PTR pParams[5]; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	pParams[0] = pParamsIn;				// p0 type is HEAP_PTR
+	pParams[1] = pParams[0] + sizeof(void*);	// p1 type is HEAP_PTR
+	pParams[2] = pParams[1] + sizeof(void*);	// p2 type is U32
+	pParams[3] = pParams[2] + sizeof(U32);		// p3 type is U32
+	pParams[4] = pParams[3] + sizeof(U32);		// p4 type is U32*
+
+	//HEAP_PTR pathHP = *(HEAP_PTR*)pParams[0];
+	HEAP_PTR pathPatternHP = *(HEAP_PTR*)pParams[1];
+	U32 attrs = *(U32*)pParams[2];
+	U32 mask = *(U32*)pParams[3];
+	U32* pError = *(U32**)pParams[4];
 	U32 /*pathLen,*/ pathPatternLen;
 	//STRING2 path = SystemString_GetString(pathHP, &pathLen);
 	STRING2 pathPattern = SystemString_GetString(pathPatternHP, &pathPatternLen);

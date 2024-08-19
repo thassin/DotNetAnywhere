@@ -36,8 +36,14 @@ tAsyncCall* System_Enum_Internal_GetValue(PTR pThis_, PTR pParams, PTR pReturnVa
 	return NULL;
 }
 
-tAsyncCall* System_Enum_Internal_GetInfo(PTR pThis_, PTR pParams, PTR pReturnValue) {
-	tMD_TypeDef *pEnumType = RuntimeType_DeRef((PTR)((tMD_TypeDef**)pParams)[0]);
+tAsyncCall* System_Enum_Internal_GetInfo(PTR pThis_, PTR pParamsIn, PTR pReturnValue) {
+
+	PTR pParams[3]; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	pParams[0] = pParamsIn;				// p0 type is tMD_TypeDef*
+	pParams[1] = pParams[0] + sizeof(void*);	// p1 type is HEAP_PTR*
+	pParams[2] = pParams[1] + sizeof(void*);	// p2 type is HEAP_PTR*
+
+	tMD_TypeDef *pEnumType = RuntimeType_DeRef((PTR)*(tMD_TypeDef**)pParams[0]);
 	U32 i, retIndex;
 	HEAP_PTR names, values;
 
@@ -61,8 +67,8 @@ tAsyncCall* System_Enum_Internal_GetInfo(PTR pThis_, PTR pParams, PTR pReturnVal
 		retIndex++;
 	}
 
-	*(((HEAP_PTR**)pParams)[1]) = names;
-	*(((HEAP_PTR**)pParams)[2]) = values;
+	*(*(HEAP_PTR**)pParams[1]) = names;
+	*(*(HEAP_PTR**)pParams[2]) = values;
 
 	return NULL;
 }

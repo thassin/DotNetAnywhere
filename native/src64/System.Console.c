@@ -32,7 +32,7 @@ tAsyncCall* System_Console_Write(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	STRING2 str;
 	U32 i, strLen;
 
-	string = *(HEAP_PTR*)pParams;
+	string = *(HEAP_PTR*)pParams; // just use the first parameter.
 	if (string != NULL) {
 #define SUB_LEN 128
 		unsigned char str8[SUB_LEN+1];

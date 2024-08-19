@@ -56,9 +56,9 @@ tAsyncCall* System_String_ctor_CharInt32(PTR pThis_, PTR pParamsIn, PTR pReturnV
 	CHAR2 c;
 	U32 i, len;
 
-	PTR pParams[2];
-	pParams[0] = pParamsIn;
-	pParams[1] = pParams[0] + sizeof(U32);
+	PTR pParams[2]; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	pParams[0] = pParamsIn;				// p0 type is U32 / CHAR2
+	pParams[1] = pParams[0] + sizeof(U32);		// p1 type is U32
 
 	c = (CHAR2)( *(U32*)pParams[0] );
 	len = *(U32*)pParams[1];
@@ -77,10 +77,10 @@ tAsyncCall* System_String_ctor_CharAIntInt(PTR pThis_, PTR pParamsIn, PTR pRetur
 	PTR charElements;
 	U32 startIndex, length;
 
-	PTR pParams[3];
-	pParams[0] = pParamsIn;
-	pParams[1] = pParams[0] + sizeof(void*);
-	pParams[2] = pParams[1] + sizeof(U32);
+	PTR pParams[3]; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	pParams[0] = pParamsIn;				// p0 type is HEAP_PTR
+	pParams[1] = pParams[0] + sizeof(void*);	// p1 type is U32
+	pParams[2] = pParams[1] + sizeof(U32);		// p2 type is U32
 
 	charArray = *(HEAP_PTR*)pParams[0];
 	startIndex = *(U32*)pParams[1];
@@ -98,10 +98,10 @@ tAsyncCall* System_String_ctor_StringIntInt(PTR pThis_, PTR pParamsIn, PTR pRetu
 	tSystemString *pThis, *pStr;
 	U32 startIndex, length;
 
-	PTR pParams[3];
-	pParams[0] = pParamsIn;
-	pParams[1] = pParams[0] + sizeof(void*);
-	pParams[2] = pParams[1] + sizeof(U32);
+	PTR pParams[3]; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	pParams[0] = pParamsIn;				// p0 type is tSystemString*
+	pParams[1] = pParams[0] + sizeof(void*);	// p1 type is U32
+	pParams[2] = pParams[1] + sizeof(U32);		// p2 type is U32
 
 	pStr = *(tSystemString**)pParams[0];
 	startIndex = *(U32*)pParams[1];
@@ -127,9 +127,9 @@ tAsyncCall* System_String_get_Chars(PTR pThis_, PTR pParams, PTR pReturnValue) {
 tAsyncCall* System_String_InternalConcat(PTR pThis_, PTR pParamsIn, PTR pReturnValue) {
 	tSystemString *s0, *s1, *ret;
 
-	PTR pParams[2];
-	pParams[0] = pParamsIn;
-	pParams[1] = pParams[0] + sizeof(void*);
+	PTR pParams[2]; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	pParams[0] = pParamsIn;				// p0 type is HEAP_PTR / tSystemString*
+	pParams[1] = pParams[0] + sizeof(void*);	// p1 type is HEAP_PTR / tSystemString*
 
 	s0 = (tSystemString*)( *(HEAP_PTR*)pParams[0] );
 	s1 = (tSystemString*)( *(HEAP_PTR*)pParams[1] );
@@ -151,9 +151,9 @@ tAsyncCall* System_String_InternalTrim(PTR pThis_, PTR pParamsIn, PTR pReturnVal
 	tSystemString *pRet;
 	U16 c;
 
-	PTR pParams[2];
-	pParams[0] = pParamsIn;
-	pParams[1] = pParams[0] + sizeof(void*);
+	PTR pParams[2]; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	pParams[0] = pParamsIn;				// p0 type is HEAP_PTR
+	pParams[1] = pParams[0] + sizeof(void*);	// p1 type is U32
 
 	pWhiteChars = *(HEAP_PTR*)pParams[0];
 	trimType = *(U32*)pParams[1];
@@ -210,9 +210,9 @@ tAsyncCall* System_String_Equals(PTR pThis_, PTR pParamsIn, PTR pReturnValue) {
 	tSystemString *a, *b;
 	U32 ret;
 
-	PTR pParams[2];
-	pParams[0] = pParamsIn;
-	pParams[1] = pParams[0] + sizeof(void*);
+	PTR pParams[2]; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	pParams[0] = pParamsIn;				// p0 type is tSystemString*
+	pParams[1] = pParams[0] + sizeof(void*);	// p1 type is tSystemString*
 
 	a = *(tSystemString**)pParams[0];
 	b = *(tSystemString**)pParams[1];
@@ -252,9 +252,9 @@ tAsyncCall* System_String_GetHashCode(PTR pThis_, PTR pParams, PTR pReturnValue)
 tAsyncCall* System_String_InternalReplace(PTR pThis_, PTR pParamsIn, PTR pReturnValue) {
 	tSystemString *pThis = (tSystemString*)pThis_;
 
-	PTR pParams[2];
-	pParams[0] = pParamsIn;
-	pParams[1] = pParams[0] + sizeof(void*);
+	PTR pParams[2]; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	pParams[0] = pParamsIn;				// p0 type is tSystemString*
+	pParams[1] = pParams[0] + sizeof(void*);	// p1 type is tSystemString*
 
 	tSystemString *pOld = *(tSystemString**)pParams[0];
 	tSystemString *pNew = *(tSystemString**)pParams[1];
@@ -319,11 +319,11 @@ tAsyncCall* System_String_InternalReplace(PTR pThis_, PTR pParamsIn, PTR pReturn
 tAsyncCall* System_String_InternalIndexOf(PTR pThis_, PTR pParamsIn, PTR pReturnValue) {
 	tSystemString *pThis = (tSystemString*)pThis_;
 
-	PTR pParams[4];
-	pParams[0] = pParamsIn;
-	pParams[1] = pParams[0] + sizeof(U32); // NOTICE stackSize is 4 even though the value is U16.
-	pParams[2] = pParams[1] + sizeof(I32);
-	pParams[3] = pParams[2] + sizeof(I32);
+	PTR pParams[4]; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	pParams[0] = pParamsIn;				// p0 type is U32 / U16 (this is the CHAR2 character value)
+	pParams[1] = pParams[0] + sizeof(U32);		// p1 type is I32 (NOTICE real size of p0 is sizeof(U32) instead of sizeof(U16))
+	pParams[2] = pParams[1] + sizeof(I32);		// p2 type is I32
+	pParams[3] = pParams[2] + sizeof(I32);		// p3 type is U32
 
 	U16 value = *(U16*)pParams[0];
 	I32 startIndex = *(I32*)pParams[1];
@@ -356,11 +356,11 @@ tAsyncCall* System_String_InternalIndexOf(PTR pThis_, PTR pParamsIn, PTR pReturn
 tAsyncCall* System_String_InternalIndexOfAny(PTR pThis_, PTR pParamsIn, PTR pReturnValue) {
 	tSystemString *pThis = (tSystemString*)pThis_;
 
-	PTR pParams[4];
-	pParams[0] = pParamsIn;
-	pParams[1] = pParams[0] + sizeof(void*);
-	pParams[2] = pParams[1] + sizeof(I32);
-	pParams[3] = pParams[2] + sizeof(I32);
+	PTR pParams[4]; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	pParams[0] = pParamsIn;				// p0 type is HEAP_PTR
+	pParams[1] = pParams[0] + sizeof(void*);	// p1 type is I32
+	pParams[2] = pParams[1] + sizeof(I32);		// p2 type is I32
+	pParams[3] = pParams[2] + sizeof(I32);		// p3 type is U32
 
 	HEAP_PTR valueArray = *(HEAP_PTR*)pParams[0];
 	I32 startIndex = *(I32*)pParams[1];

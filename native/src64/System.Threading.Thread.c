@@ -30,14 +30,14 @@
 
 tAsyncCall* System_Threading_Thread_ctor(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tThread *pThread = Thread();
-	pThread->startDelegate = *(PTR*)pParams;
+	pThread->startDelegate = *(PTR*)pParams; // just use the first parameter.
 	*(HEAP_PTR*)pReturnValue = (HEAP_PTR)pThread;
 	return NULL;
 }
 
 tAsyncCall* System_Threading_Thread_ctorParam(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tThread *pThread = Thread();
-	pThread->startDelegate = *(PTR*)pParams;
+	pThread->startDelegate = *(PTR*)pParams; // just use the first parameter.
 	*(HEAP_PTR*)pReturnValue = (HEAP_PTR)pThread;
 	pThread->hasParam = 1;
 	return NULL;
@@ -74,7 +74,7 @@ tAsyncCall* System_Threading_Thread_Start(PTR pThis_, PTR pParams, PTR pReturnVa
 tAsyncCall* System_Threading_Thread_Sleep(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tAsyncCall *pAsync = TMALLOC(tAsyncCall);
 
-	pAsync->sleepTime = *(I32*)pParams;
+	pAsync->sleepTime = *(I32*)pParams; // just use the first parameter.
 
 	return pAsync;
 }

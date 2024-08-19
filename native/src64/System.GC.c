@@ -39,7 +39,7 @@ tAsyncCall* System_GC_Internal_CollectionCount(PTR pThis_, PTR pParams, PTR pRet
 }
 
 tAsyncCall* System_GC_GetTotalMemory(PTR pThis_, PTR pParams, PTR pReturnValue) {
-	if (*(U32*)pParams) {
+	if (*(U32*)pParams) { // just use the first parameter.
 		Heap_GarbageCollect();
 	}
 	*(U64*)pReturnValue = Heap_GetTotalMemory();
@@ -47,7 +47,7 @@ tAsyncCall* System_GC_GetTotalMemory(PTR pThis_, PTR pParams, PTR pReturnValue) 
 }
 
 tAsyncCall* System_GC_SuppressFinalize(PTR pThis_, PTR pParams, PTR pReturnValue) {
-	HEAP_PTR obj = ((HEAP_PTR*)pParams)[0];
+	HEAP_PTR obj = *(HEAP_PTR*)pParams; // just use the first parameter.
 	Heap_UnmarkFinalizer(obj);
 	return NULL;
 }

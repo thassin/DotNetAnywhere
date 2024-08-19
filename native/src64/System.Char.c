@@ -32,7 +32,7 @@
 
 #define UC_INDEX_LEN (sizeof(UC_Index) / 4)
 tAsyncCall* System_Char_GetUnicodeCategory(PTR pThis_, PTR pParams, PTR pReturnValue) {
-	U32 paramCodePoint = ((U32*)pParams)[0];
+	U32 paramCodePoint = *(U32*)pParams; // just use the first parameter.
 	// Do a binary search on the UC_Index array
 	U32 curOfs = UC_INDEX_LEN / 2;
 	U32 upper = UC_INDEX_LEN;
@@ -100,7 +100,7 @@ static I32 SearchCaseArray(unsigned short *pCaseArray, unsigned short find) {
 }
 
 tAsyncCall* System_Char_ToLowerInvariant(PTR pThis_, PTR pParams, PTR pReturnValue) {
-	U32 paramCodePoint = ((U32*)pParams)[0];
+	U32 paramCodePoint = *(U32*)pParams; // just use the first parameter.
 	I32 pos;
 
 	pos = SearchCaseArray(UC_CaseUpper, (unsigned short)paramCodePoint);
@@ -110,7 +110,7 @@ tAsyncCall* System_Char_ToLowerInvariant(PTR pThis_, PTR pParams, PTR pReturnVal
 }
 
 tAsyncCall* System_Char_ToUpperInvariant(PTR pThis_, PTR pParams, PTR pReturnValue) {
-	U32 paramCodePoint = ((U32*)pParams)[0];
+	U32 paramCodePoint = *(U32*)pParams; // just use the first parameter.
 	I32 pos;
 
 	pos = SearchCaseArray(UC_CaseLower, (unsigned short)paramCodePoint);

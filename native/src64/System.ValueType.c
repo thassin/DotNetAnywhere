@@ -32,14 +32,18 @@
 // Get all the fields in the value-types in the parameters.
 // If the 2nd parameter is NULL, then don't include it!
 // The type of the objects will always be identical.
-tAsyncCall* System_ValueType_GetFields(PTR pThis_, PTR pParams, PTR pReturnValue) {
+tAsyncCall* System_ValueType_GetFields(PTR pThis_, PTR pParamsIn, PTR pReturnValue) {
 	HEAP_PTR o1,o2, ret;
 	tMD_TypeDef *pType;
 	tMetaData *pMetaData;
 	U32 i, retOfs, numInstanceFields;
 
-	o1 = ((HEAP_PTR*)pParams)[0];
-	o2 = ((HEAP_PTR*)pParams)[1];
+	PTR pParams[2]; // need to get multiple parameters => safe 32/64 bit offsets needed.
+	pParams[0] = pParamsIn;				// p0 type is HEAP_PTR
+	pParams[1] = pParams[0] + sizeof(void*);	// p1 type is HEAP_PTR
+
+	o1 = *(HEAP_PTR*)pParams[0];
+	o2 = *(HEAP_PTR*)pParams[1];
 	pType = Heap_GetType(o1);
 	pMetaData = pType->pMetaData;
 

@@ -46,7 +46,7 @@ tAsyncCall* System_WeakReference_get_Target(PTR pThis_, PTR pParams, PTR pReturn
 
 tAsyncCall* System_WeakReference_set_Target(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tWeakRef *pThis = (tWeakRef*)pThis_;
-	HEAP_PTR target = ((HEAP_PTR*)pParams)[0];
+	HEAP_PTR target = *(HEAP_PTR*)pParams; // just use the first parameter.
 
 	if (pThis->target != NULL) {
 		tWeakRef **ppWeakRef = (tWeakRef**)Heap_GetWeakRefAddress(pThis->target);
